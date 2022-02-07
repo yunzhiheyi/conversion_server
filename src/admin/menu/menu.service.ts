@@ -123,7 +123,8 @@ export class MenuService {
                 _id: item._id + '_' + res._id, // 这里一定要加上菜单ID
                 name: res.btnName,
                 level: 3,
-                btnId: res.btnId,
+                btnId: res._id,
+                label: res.btnId,
                 parentId: res.menuId,
               };
             });

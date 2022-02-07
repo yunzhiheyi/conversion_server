@@ -18,9 +18,13 @@ export class AdminRoleBtn {
   @prop({ type: String, required: true })
   btnId: String
 
-  // 按钮锁
-  @prop({ type: String, required: true, default: false })
+  // 排序
+  @prop({ type: Number, required: true })
   sort: String
+
+  // 按钮锁
+  @prop({ type: Boolean, required: true, default: false })
+  isLock: Boolean
 
   // 当前按钮的权限菜单ID
   @prop({ type: String, required: true })

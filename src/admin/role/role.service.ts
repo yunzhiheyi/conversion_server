@@ -35,6 +35,9 @@ export class RoleService {
     const options = {
       sortType: 'sort',
       sortVal: '1',
+      queryField: {
+        createdAt: 0
+      }
     };
     return await this.toolsService.getPageList(options, this.RoleBtnModel);
   }

@@ -1,3 +1,4 @@
+import { ProjectModule } from './admin/project/project.module';
 import { DashboardModule } from './admin/dashboard/dashboard.module';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
@@ -18,8 +19,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypegooseModule } from 'nestjs-typegoose';
 import { BullMQModule } from 'nestjs-bullmq';
 import { ScheduleService } from './utils/schedule.service';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '.', 'public'),
+    }),
+    ProjectModule,
     DashboardModule,
     BullMQModule.forRootAsync({
       name: 'QueueName',

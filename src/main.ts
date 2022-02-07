@@ -12,6 +12,7 @@ import { OrderModule } from './admin/order/order.module';
 import { PriceModule } from './admin/price/price.module';
 import { DashboardModule } from './admin/dashboard/dashboard.module';
 import { ConversionModule } from './app/conversion/conversion.module';
+import { ProjectModule } from './admin/project/project.module';
 import { AppModule } from './app.module';
 import { jwtSecret } from './config';
 var redis = require('redis')
@@ -25,11 +26,9 @@ import { HttpExceptionFilter } from './filter/http-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { logger } from './middleware/logger.middleware';
 import { TransformInterceptor } from './middleware/transform.middleware';
-import { hostname } from 'os';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // 静态资源
-  app.useStaticAssets('public')
+
   app.use(bodyParser.json({ limit: '100mb' }));
   app.use(bodyParser.raw({ limit: '100mb' }));
   app.use(bodyParser.xml());
@@ -78,7 +77,7 @@ async function bootstrap() {
     .setDescription('RESTful-API前后端后端服务管理接口')
     .setVersion('1.0.0')
     .build();
-  const document = SwaggerModule.createDocument(app, config, { include: [AuserModule, DashboardModule, RoleModule, MenuModule, SystemModule, OrderModule, PriceModule] });
+  const document = SwaggerModule.createDocument(app, config, { include: [AuserModule, DashboardModule, RoleModule, MenuModule, SystemModule, OrderModule, PriceModule, ProjectModule] });
   // APP端Swagger
   const _config = new DocumentBuilder()
     .setTitle('AI转换精灵小程序端')

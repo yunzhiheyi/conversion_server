@@ -32,7 +32,7 @@ export class RoleController {
       message
     }
   }
-  // 删除菜单
+  // 删除按钮
   @Get('role/btn/delete')
   @HttpCode(200)
   @UseGuards(AdminGuard) // 拦截权限

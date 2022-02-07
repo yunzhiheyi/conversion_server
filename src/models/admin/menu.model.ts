@@ -1,4 +1,5 @@
 import { prop, modelOptions, Severity } from '@typegoose/typegoose'
+import { AdminRoleBtn } from '../admin/role.btn.model'
 @modelOptions({
   schemaOptions: {
     collection: 'j_admin_menu',
@@ -56,6 +57,10 @@ export class AdminMenu {
   // 路由参数
   @prop({ type: String })
   routerParameter: String
+
+  // 路由路径
+  @prop({ type: String })
+  routerPath: String
 
   // 路由名称
   @prop({ type: String, required: true, })

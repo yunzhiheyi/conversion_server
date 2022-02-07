@@ -72,6 +72,37 @@ export class IdDto {
   readonly id: string;
 }
 
+//文件删除
+export class fileDeleteDto {
+  @ApiProperty({ description: '填写文件mid' })
+  readonly mid: string;
+
+  @ApiProperty({ description: '填写文件name' })
+  readonly name: string;
+}
+
+// 添加编辑专题
+export class AddEditProjectDto {
+  @ApiProperty({ description: '_id' })
+  readonly _id: string;
+
+  @ApiProperty({ description: '专题名称' })
+  readonly name: string;
+
+  @ApiProperty({ description: '专题描述' })
+  readonly describe: string;
+
+  @ApiProperty({ description: '缩略图ID' })
+  readonly thumbnailId: string;
+
+  @ApiProperty({ description: '内容图ID' })
+  readonly contentImageId: string;
+
+  @ApiProperty({ description: '内容' })
+  readonly content: string;
+}
+
+
 // 添加编辑菜单
 export class AddEditMenuDto {
   @ApiProperty({ description: '_id' })

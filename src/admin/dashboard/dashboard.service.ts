@@ -85,10 +85,10 @@ export class DashboardService {
     const day_Time = dayjs(new Date()).subtract(7, 'day').format('YYYY-MM-DD');
     const yesterday_time = dayjs(new Date()).subtract(1, 'day').format('YYYY-MM-DD');;
     const _arr = this.get7dayArr();
-    console.log('startTime', startTime);
-    console.log('endTime', endTime);
-    console.log('day_Time', day_Time);
-    console.log('yesterday_time', yesterday_time);
+    // console.log('startTime', startTime);
+    // console.log('endTime', endTime);
+    // console.log('day_Time', day_Time);
+    // console.log('yesterday_time', yesterday_time);
     const Amount = 0;
     //订单总额status
     const TotalAmount = await this.orderModel.aggregate([

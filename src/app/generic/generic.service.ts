@@ -79,6 +79,7 @@ export class GenericService {
     if (!_text) {
       return false;
     }
+    // 生成目录
     fs.ensureDirSync(UPLOAD_WORD_DIR);
     try {
       fs.writeFileSync(txtPath, _text);

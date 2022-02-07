@@ -9,13 +9,13 @@ export class CacheService {
   private async openClient() {
     this.client = await redis.createClient({
       password: 'redis123456',
-      db: 1
+      db: 1,
     });
-    this.client.on('connect', () => console.log('::> Redis Client Connected db1'));
-    this.client.on('error', (err: any) => console.log('Redis Client Error db1', err));
-    this.client.on('subscribe', function (channel, count) {
-      console.log(`${channel}:${count}`);               //  test channel:1
-    });
+    // this.client.on('connect', () => console.log('::> Redis Client Connected db1'));
+    // this.client.on('error', (err: any) => console.log('Redis Client Error db1', err));
+    // this.client.on('subscribe', function (channel, count) {
+    //   console.log(`${channel}:${count}`);               //  test channel:1
+    // });
   }
 
   /**

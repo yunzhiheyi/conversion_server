@@ -29,7 +29,12 @@ export class MiniprogramUploadService {
     private readonly toolsService: ToolsService
 
   ) {
-    this.logger = new Logger('TencentAiService')
+    this.logger = new Logger('MiniprogramUploadService');
+    fs.ensureDirSync(UPLOAD_DIR);
+    fs.ensureDirSync(TEMP_DIR);
+    fs.ensureDirSync(PCM_DIR);
+    fs.ensureDirSync(MP3_DIR);
+    fs.ensureDirSync(COVER_DIR);
   }
   public mergeFiles(chunkFilePaths: any[], writeStream: any) {
     return new Promise<void>((resolve) => {
@@ -54,7 +59,6 @@ export class MiniprogramUploadService {
   async upload(query: any, rawBody: any) {
     const { identifier, index } = query;
     const chunkDir = _path.resolve(TEMP_DIR, identifier);
-    fs.ensureDirSync(chunkDir);
     try {
       fs.writeFileSync(`${chunkDir}/${identifier}-${index}`, rawBody);
     } catch (err) {
@@ -218,7 +222,6 @@ export class MiniprogramUploadService {
       });
     } else {
       const chunkDir = _path.resolve(TEMP_DIR, identifier);
-      fs.ensureDirSync(chunkDir);
       const chunkFiles = fs.readdirSync(chunkDir);
       return JSON.stringify({
         needUpload: true,

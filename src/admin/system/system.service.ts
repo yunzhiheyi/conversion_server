@@ -1,6 +1,3 @@
-/*
-https://docs.nestjs.com/providers#services
-*/
 import { ToolsService } from '../../utils/tools.service';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from 'nestjs-typegoose';
