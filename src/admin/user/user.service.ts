@@ -115,18 +115,20 @@ export class AuserService {
     const options = {
       type: 'pop',
       populate: 'power',
-      sortType: 'sort',
-      sortVal: '1'
     };
     return await this.toolsService.getPageList(options, this.AdminUserModel);
   }
 
   // 用户列表
   async AppUserList(query: any) {
+    let reg = new RegExp(query.keyword, 'i');
+    let findField = {};
+    if (query.keyword) {
+      findField['mobile'] = { $regex: reg }
+    }
     const options = {
       type: 'page',
-      sortType: 'sort',
-      sortVal: '1'
+      findField
     };
     return await this.toolsService.getPageList(options, this.userModel);
   }

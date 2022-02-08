@@ -155,7 +155,9 @@ export class SystemController {
     }
     return {
       code,
-      data: result,
+      data: {
+        result
+      },
       message
     }
   }

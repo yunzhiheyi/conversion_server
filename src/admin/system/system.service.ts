@@ -64,34 +64,45 @@ export class SystemService {
   }
   // 数据库还原
   async mongorestore(_id: any) {
-    var _res = await this.databaseModel.findOne({ _id }, { _id: 1, path: 1, name: 1 })
-    var mongorestorePath = _path.join(__dirname, '../..' + _res.path + '/conversionDB');
+    var mongorestorePath = _path.join(__dirname, '../../db/' + _id + '/conversionDB');
     const cmd = 'mongorestore -h 127.0.0.1:27017 -d conversionDB --drop ' + mongorestorePath;
     this.logger.log('正在还原数据...')
     var data = await this.toolsService.ShellExecCmd(cmd, '数据库还原');
     if (data['success']) {
-      this.logger.log(_res.name + '数据恢复成功...');
+      this.logger.log(_id + '备份数据恢复成功...');
       return true;
     }
   }
   // 数据库列表
   async databaseList(query: any) {
-    const options = {
-      type: query['page'] ? 'page' : 'list',
-    };
-    return await this.toolsService.getPageList(options, this.databaseModel);
+    var dbBackupPath = _path.join(__dirname, '../../db/');
+    let components = []
+    const files = fs.readdirSync(dbBackupPath)
+    files.forEach(function (item, index) {
+      let stat = fs.lstatSync(dbBackupPath + item)
+      if (stat.isDirectory()) {
+        var _list = item.split('_');
+        var YYYY = _list[0].replace(/\./g, "-");
+        var HHMMSS = _list[1].replace(/\./g, ":");
+        components.push({
+          _id: item,
+          name: item + '备份',
+          path: '/db/' + item + '/conversionDB',
+          createdAt: YYYY + ' ' + HHMMSS
+        })
+      }
+    })
+    return components.sort((a, b) => {
+      return b.createdAt < a.createdAt ? -1 : 1
+    })
   }
 
-  // 删除、批量删除专题
+  // 删除
   async delete(query: any) {
-    var _res = await this.databaseModel.findOne({ _id: query.id }, { _id: 1, path: 1 })
-    var dbPath = _path.join(__dirname, '../..' + _res.path);
+    var dbPath = _path.join(__dirname, '../../db/' + query.id);
     // 删除目录文件
     fs.removeSync(dbPath);
-    // 判断是否是批量删除
-    const ids = query.arrids && query.arrids instanceof Array ? query.arrids : [query.id];
-    const result = await this.databaseModel.deleteMany({ _id: { $in: ids } });
-    return !!result
+    return true;
   }
 
 }

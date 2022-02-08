@@ -31,46 +31,7 @@ export class OrderService {
     if (query.status) {
       findField['status'] = query.status
     }
-    //订单总额status
-    const TotalAmount = await this.orderModel.aggregate([
-      {
-        $lookup:
-        {
-          from: "j_price",
-          localField: "product_code",
-          foreignField: "_id",
-          as: "priceInfo"
-        }
-      },
-      {
-        $lookup:
-        {
-          from: "j_app_user",
-          localField: "_id",
-          foreignField: "user_id",
-          as: "userInfo"
-        }
-      },
-      { $unwind: "$priceInfo" }, // 将数组转为为每个文档
-      {
-        $match: {
-          $and: [{ status: 'PAY_SUCCESS' }],
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          day: { $substr: ['$createdAt', 0, 10] },
-          priceInfo: 1
-        },
-      },
-      {
-        $group: {
-          _id: '$day',
-          totalAmount: { $sum: '$priceInfo.payment_price' }
-        }
-      },
-    ]);
+
     const options = {
       type: 'pop',
       findField,
