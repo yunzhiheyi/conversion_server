@@ -17,8 +17,12 @@ export class UploadModel {
   @prop({ items: String })
   imgPath?: String[];
 
-  // 七牛云的key
+  // 图片类型
   @prop({ type: String, required: true })
   key: String
+
+  // 是否可用 > 用于没用的图片会定时清除
+  @prop({ type: Boolean, required: true, default: false })
+  isLock: Boolean
 
 }

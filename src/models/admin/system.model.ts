@@ -43,5 +43,9 @@ export class SystemInfoModel {
   @prop({ type: Object })
   whiteUser: Object
 
+  // 数据库备份时间
+  @prop({ type: Date })
+  backupTime: Date
+
 
 }

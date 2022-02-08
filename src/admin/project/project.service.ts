@@ -4,12 +4,15 @@ import { ReturnModelType } from '@typegoose/typegoose';
 import { InjectModel } from 'nestjs-typegoose';
 import { ToolsService } from 'src/utils/tools.service';
 import { ProjectModel } from '../../models/admin/project.model';
+import { UploadModel } from '../../models/admin/upload.model';
 import { SnowflakeService } from '@quickts/nestjs-snowflake';
 @Injectable()
 export class ProjectService {
   constructor(
     @InjectModel(ProjectModel)
     private readonly projectModel: ReturnModelType<typeof ProjectModel>,
+    @InjectModel(UploadModel)
+    private readonly uploadModel: ReturnModelType<typeof UploadModel>,
     private readonly toolsService: ToolsService,
     private readonly snowflakeService: SnowflakeService,
   ) { }
@@ -17,12 +20,38 @@ export class ProjectService {
   async add(_body: { [x: string]: any; }, _userId: any) {
     const _params = this.toolsService._params(_body);
     _params['_id'] = await this.snowflakeService.nextId();
+    var _contentImageId = _params['contentImageId'];
+    var _thumbnailId = _params['thumbnailId'];
+    // 锁定当前图片
+    if (_contentImageId || _thumbnailId) {
+      var ids = []
+      if (_contentImageId) {
+        ids.push(_contentImageId);
+      }
+      if (_thumbnailId) {
+        ids.push(_thumbnailId);
+      }
+      await this.uploadModel.updateMany({ _id: { $in: ids } }, { $set: { isLock: true } });
+    }
     const result = await this.projectModel.create(_params);
     return !!result;
   }
   // 更新专题
   async update(_body: any) {
     const _params = this.toolsService._params(_body);
+    var _contentImageId = _params['contentImageId'];
+    var _thumbnailId = _params['thumbnailId'];
+    // 锁定当前图片
+    if (_contentImageId || _thumbnailId) {
+      var ids = []
+      if (_contentImageId) {
+        ids.push(_contentImageId);
+      }
+      if (_thumbnailId) {
+        ids.push(_thumbnailId);
+      }
+      await this.uploadModel.updateMany({ _id: { $in: ids } }, { $set: { isLock: true } });
+    }
     const result = await this.projectModel.updateMany(
       { _id: _body._id },
       { $set: _params },

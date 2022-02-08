@@ -9,7 +9,7 @@ import { ToolsService } from './tools.service';
 import glob from 'glob';
 
 // 文件存放路径
-const UPLOAD_DIR = _path.join(__dirname, '../public/uploads/')
+const UPLOAD_DIR = _path.join(__dirname, '../public/upload/')
 // 文件临时存放路径
 const TEMP_DIR = _path.resolve(__dirname, '../public/tmp/')
 // PCM文件临时存放路径
@@ -98,7 +98,7 @@ export class MiniprogramUploadService {
       pcmFilePath +
       '.pcm';
     // 提取音频转为pcm
-    var _res = await this.toolsService.FfmpegExecCmd(_ffmpeg, '音频转PCM');
+    var _res = await this.toolsService.ShellExecCmd(_ffmpeg, '音频转PCM');
     var _ffmpegToMp3 =
       'ffmpeg -y -ac 1 -ar 16000 -f s16le -i ' +
       pcmFilePath +
@@ -122,10 +122,10 @@ export class MiniprogramUploadService {
       ' -print_format json -show_streams -show_format -v 0';
     if (_res['success']) {
       if (!duration) {
-        var format = await this.toolsService.FfmpegExecCmd(_ffprobe, '获取音频流');
+        var format = await this.toolsService.ShellExecCmd(_ffprobe, '获取音频流');
         _resformat = JSON.parse(format['data'])
       }
-      var _resMp3 = await this.toolsService.FfmpegExecCmd(_ffmpegToMp3, 'PCM转MP3');
+      var _resMp3 = await this.toolsService.ShellExecCmd(_ffmpegToMp3, 'PCM转MP3');
       if (_resMp3['success']) {
         // 将音频提交到七牛云
         result = await this.qiniuUpload.qiniuPrameter(
@@ -141,7 +141,7 @@ export class MiniprogramUploadService {
       }
       if (ext === 'mp4') {
         // 生成封面
-        await this.toolsService.FfmpegExecCmd(_coverImage, '视频提取封面');
+        await this.toolsService.ShellExecCmd(_coverImage, '视频提取封面');
         // 将封面提交到七牛云
         _cover_result = await this.qiniuUpload.qiniuPrameter(
           _cover_img,

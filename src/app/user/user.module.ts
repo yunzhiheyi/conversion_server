@@ -15,11 +15,12 @@ import { AppConversion } from '../../models/app/conversion.model';
 import { AppRecord } from '../../models/app/record.model';
 import { QiniuService } from '../../utils/qiniu.service';
 import { TencentAiService } from '../../utils/tencent.ai';
+import { DatabaseModel } from '../../models/admin/database.model';
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    TypegooseModule.forFeature([AppUserModel, SystemInfoModel, AppConversion, AppRecord]),
+    TypegooseModule.forFeature([AppUserModel, DatabaseModel, SystemInfoModel, AppConversion, AppRecord]),
   ],
   controllers: [UserController],
   providers: [

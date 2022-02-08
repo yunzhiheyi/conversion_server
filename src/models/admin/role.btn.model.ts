@@ -19,7 +19,7 @@ export class AdminRoleBtn {
   btnId: String
 
   // 排序
-  @prop({ type: Number, required: true })
+  @prop({ type: Number })
   sort: String
 
   // 按钮锁

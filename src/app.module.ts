@@ -7,6 +7,8 @@ import { AuserModule } from './admin/user/user.module';
 import { MenuModule } from './admin/menu/menu.module';
 import { RoleModule } from './admin/role/role.module';
 import { AppUserModule } from './app/user/user.module';
+import { UploadModule } from './admin/upload/upload.module';
+import { ScheduleTaskModule } from './admin/schedule/schedule.module';
 import { ConversionModule } from './app/conversion/conversion.module';
 import { GenericModule } from './app/generic/generic.module';
 import { SystemModule } from './admin/system/system.module';
@@ -15,10 +17,8 @@ import { OrderModule } from './admin/order/order.module';
 import { PriceModule } from './admin/price/price.module';
 import { RecordModule } from './app/record/record.module';
 import { PayModule } from './app/pay/pay.module';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TypegooseModule } from 'nestjs-typegoose';
 import { BullMQModule } from 'nestjs-bullmq';
-import { ScheduleService } from './utils/schedule.service';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 @Module({
@@ -26,8 +26,6 @@ import { join } from 'path';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '.', 'public'),
     }),
-    ProjectModule,
-    DashboardModule,
     BullMQModule.forRootAsync({
       name: 'QueueName',
       useFactory: () => ({
@@ -38,17 +36,16 @@ import { join } from 'path';
       }),
     }),
     // 定时任务
-    ScheduleModule.forRoot(),
     // mongodb数据库连接
     TypegooseModule.forRoot("mongodb://localhost:27017/conversionDB", {
       // useNewUrlParser: true,
-    }), AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
+    }),
+    ProjectModule, ScheduleTaskModule, UploadModule, DashboardModule, AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
   controllers: [
     AppController
   ],
   providers: [
     AppService,
-    ScheduleService
   ],
 })
 export class AppModule { }

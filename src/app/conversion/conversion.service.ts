@@ -147,7 +147,7 @@ export class ConversionService {
     // MP3文件临时存放路径
     const MP3_DIR = _path.resolve(__dirname, '../../public/mp3/')
     // 文件存放路径
-    const UPLOAD_DIR = _path.join(__dirname, '../../public/uploads/')
+    const UPLOAD_DIR = _path.join(__dirname, '../../public/upload/')
     const pcmFilePath = _path.resolve(PCM_DIR, fliePcmName);
     const mp3FilePath = _path.resolve(MP3_DIR, flieMp3Name);
     const mp4FilePath = _path.resolve(UPLOAD_DIR, flieMp4Name);
@@ -187,12 +187,12 @@ export class ConversionService {
         `${mp4FilePath}` +
         ' -print_format json -show_streams -show_format -v 0';
       // 提取音频转为pcm
-      var _res = await this.toolsService.FfmpegExecCmd(_ffmpeg, '视频转PCM');
+      var _res = await this.toolsService.ShellExecCmd(_ffmpeg, '视频转PCM');
       if (_res['success']) {
-        var videoStreamsInfo = await this.toolsService.FfmpegExecCmd(_ffprobe, '读取视频流信息');
+        var videoStreamsInfo = await this.toolsService.ShellExecCmd(_ffprobe, '读取视频流信息');
         // 视频信息格式化
         streamsInfo = JSON.parse(videoStreamsInfo['data']);
-        var _resMp3 = await this.toolsService.FfmpegExecCmd(_ffmpegToMp3, 'PCM转MP3');
+        var _resMp3 = await this.toolsService.ShellExecCmd(_ffmpegToMp3, 'PCM转MP3');
         if (_resMp3['success']) {
           // 将音频提交到七牛云
           result = await this.qiniuService.qiniuPrameter(

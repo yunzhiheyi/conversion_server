@@ -112,11 +112,12 @@ export class ToolsService {
       }
     }
   }
-  // ffmpeg 命令执行
-  FfmpegExecCmd(_ffmpeg, name) {
+  // shell 命令执行
+  ShellExecCmd(cmd: any, name: string) {
     return new Promise((resolve, reject) => {
-      execCmd(_ffmpeg, (error: any, stdout: any, stderr: any) => {
+      execCmd(cmd, (error: any, stdout: any, stderr: any) => {
         if (error) {
+          this.logger.warn('Error:' + error); //错误
           reject(error);
           return;
         }

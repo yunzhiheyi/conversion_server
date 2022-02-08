@@ -13,13 +13,14 @@ import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 import { AppRecord } from '../../models/app/record.model';
 import { AppConversion } from '../../models/app/conversion.model';
 import { ConversionService } from '../../app/conversion/conversion.service';
+import { DatabaseModel } from '../../models/admin/database.model';
 import { QiniuService } from '../../utils/qiniu.service';
 import { TencentAiService } from '../../utils/tencent.ai';
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    TypegooseModule.forFeature([SystemInfoModel, AppUserModel, AppConversion, AppRecord])
+    TypegooseModule.forFeature([SystemInfoModel, DatabaseModel, AppUserModel, AppConversion, AppRecord])
   ],
   controllers: [WechatController],
   providers: [

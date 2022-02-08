@@ -6,11 +6,12 @@ import { ProjectModel } from '../../models/admin/project.model';
 import { TypegooseModule } from 'nestjs-typegoose';
 import { CryptoModule } from '@akanass/nestjsx-crypto';
 import { ToolsService } from 'src/utils/tools.service';
+import { UploadModel } from '../../models/admin/upload.model';
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    TypegooseModule.forFeature([ProjectModel]),
+    TypegooseModule.forFeature([ProjectModel, UploadModel]),
   ],
   controllers: [
     ProjectController

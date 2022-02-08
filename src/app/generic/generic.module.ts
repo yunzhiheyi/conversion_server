@@ -17,12 +17,13 @@ import { CryptoModule } from '@akanass/nestjsx-crypto';
 import { TypegooseModule } from 'nestjs-typegoose';
 import { AppRecord } from '../../models/app/record.model';
 import { AppUserModel } from '../../models/app/user.model';
+import { DatabaseModel } from '../../models/admin/database.model';
 import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 @Module({
   imports: [
     SnowflakeModule.forRoot({ id: 2 }),
     CryptoModule,
-    TypegooseModule.forFeature([AdminUser, AppConversion, PriceModel, SystemInfoModel, AppRecord, AppUserModel])],
+    TypegooseModule.forFeature([AdminUser, DatabaseModel, AppConversion, PriceModel, SystemInfoModel, AppRecord, AppUserModel])],
   controllers: [GenericController],
   providers: [
     GenericService,

@@ -19,12 +19,13 @@ import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 import { AppConversion } from '../../models/app/conversion.model';
 import { ConversionService } from '../../app/conversion/conversion.service';
 import { QiniuService } from '../../utils/qiniu.service';
+import { DatabaseModel } from '../../models/admin/database.model';
 import { TencentAiService } from '../../utils/tencent.ai';
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    TypegooseModule.forFeature([SystemInfoModel, OrderModel, AppConversion, PriceModel, AppRecord, AppUserModel])
+    TypegooseModule.forFeature([DatabaseModel, SystemInfoModel, OrderModel, AppConversion, PriceModel, AppRecord, AppUserModel])
   ],
   controllers: [PayController],
   providers: [
