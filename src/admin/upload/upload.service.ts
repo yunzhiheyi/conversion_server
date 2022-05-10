@@ -24,8 +24,8 @@ export class UploadService {
     this.logger = new Logger('UploadService');
     this.serverPath = _path.join(__dirname, '../../public/upload/');
   }
-  // 本地上传
-  localUpload(req, options) {
+  // 本地上传方法
+  localUpload(req: { headers: any; pipe: (arg0: any) => void; }, options: { path: any; type?: any; }) {
     return new Promise((resolve, reject) => {
       let upload = {};
       const _Busboy = new Busboy({ headers: req.headers });
@@ -37,7 +37,6 @@ export class UploadService {
           const fileFormat = mimetype.split('/');
           const fileName = dayjs().format('YYYY.MM.DD_HH:mm:ss:SSS') + '.' + fileFormat[1]; // 重命名上传文件
           const saveTo = _path.join(_path.join(filePath, fileName));
-          console.log(fileFormat, saveTo);
           file.pipe(fs.createWriteStream(saveTo));
           upload['fileName'] = fileName;
         },

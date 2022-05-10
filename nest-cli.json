@@ -2,7 +2,7 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "assets": ["public/pem/*","db/**","public/cover","public/mp3","public/pcm","public/uploads","public/tmp","logs/**"],
+    "assets": ["public/pem/*","public/cover","public/mp3","public/pcm","public/uploads","public/tmp","logs/**"],
     "watchAssets": true
   }
 }

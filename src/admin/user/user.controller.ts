@@ -70,6 +70,20 @@ export class AuserController {
     }
   }
 
+  //更新信息
+  @Post('user/update')
+  @HttpCode(200)
+  @UseGuards(AdminGuard) // 拦截权限
+  @ApiOperation({ summary: '更新密码' })
+  async userUpdate(@Headers() getHeaders: Headers, @Body() adminPostUser: aUserDto,) {
+    var res = await this.auserService.userUpdate(adminPostUser);
+    return {
+      code: 200,
+      data: !!res,
+      message: '更新成功'
+    }
+  }
+
   // 获取用户信息
   @Get('info')
   @HttpCode(200)
@@ -213,6 +227,49 @@ export class AuserController {
       message: '获取成功'
     }
   }
+  // 删除单个用户
+  @Get('appuser/delete')
+  @HttpCode(200)
+  @UseGuards(AdminGuard) // 拦截权限
+  @ApiOperation({ summary: '删除单个用户' })
+  async deleteOneUser(@Query() _Query: IdsDto, @Headers() getHeaders: Headers) {
+    var result = await this.auserService.userAppDelete(_Query);
+    var code = 200;
+    var message = '删除成功'
+    var data = true;
+    if (!result) {
+      code = 202;
+      message = '删除失败'
+      data = false;
+    }
+    return {
+      code,
+      data,
+      message
+    }
+  }
+
+  // 批量删除用户
+  @Post('appuser/batchdelete')
+  @HttpCode(200)
+  @UseGuards(AdminGuard) // 拦截权限
+  @ApiOperation({ summary: '批量删除用户' })
+  async batchDeleteAppUser(@Body() _Body: IdsDto) {
+    var result = await this.auserService.userAppDelete(_Body);
+    var code = 200;
+    var message = '删除成功'
+    var data = true;
+    if (!result) {
+      code = 202;
+      message = '删除失败'
+      data = false;
+    }
+    return {
+      code,
+      data,
+      message
+    }
+  }
   // APP用户列表
   @Get('appuser/list')
   @HttpCode(200)
@@ -225,6 +282,42 @@ export class AuserController {
   @ApiOperation({ summary: 'APP用户列表' })
   async AppUserList(@Query() _Query: pagesDto) {
     var data = await this.auserService.AppUserList(_Query);
+    return {
+      code: 200,
+      data,
+      message: '获取成功'
+    }
+  }
+  // APP用户列表
+  @Get('appuser/conversion/list')
+  @HttpCode(200)
+  @UseGuards(AdminGuard) // 拦截权限
+  @ApiHeader({
+    name: 'Authorization',
+    required: false,
+    description: '本次请求请带上token',
+  })
+  @ApiOperation({ summary: 'APP用户列表' })
+  async AppUserConversionList(@Query() _Query: pagesDto) {
+    var data = await this.auserService.AppConversionList(_Query);
+    return {
+      code: 200,
+      data,
+      message: '获取成功'
+    }
+  }
+  // APP用户邀请记录列表
+  @Get('appuser/share/list')
+  @HttpCode(200)
+  @UseGuards(AdminGuard) // 拦截权限
+  @ApiHeader({
+    name: 'Authorization',
+    required: false,
+    description: '本次请求请带上token',
+  })
+  @ApiOperation({ summary: ' APP用户邀请记录列表' })
+  async AppUserShareList(@Query() _Query: pagesDto) {
+    var data = await this.auserService.AppShareList(_Query);
     return {
       code: 200,
       data,

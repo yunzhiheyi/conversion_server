@@ -29,6 +29,8 @@ export class RoleService {
     const ids = query.arrids && query.arrids instanceof Array ? query.arrids : [query.id];
     const result = await this.RoleBtnModel.deleteMany({ _id: { $in: ids } });
     return !!result
+
+    
   }
   // 按钮获取带分页权限列表
   async btnList() {

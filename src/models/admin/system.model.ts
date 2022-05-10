@@ -40,12 +40,10 @@ export class SystemInfoModel {
   alipay: Object
 
   // 短信白名单
-  @prop({ type: Object })
-  whiteUser: Object
+  @prop({ type: Array })
+  whiteUser: []
 
   // 数据库备份时间
   @prop({ type: Date })
   backupTime: Date
-
-
 }

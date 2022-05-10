@@ -42,6 +42,13 @@ export class idDto {
   readonly id: string;
 }
 
+// taskId 查询
+
+export class taskId {
+  @IsNotEmpty()
+  readonly taskId: string;
+}
+
 // code
 export class codeDto {
   // 手机登录code
@@ -125,6 +132,10 @@ export class pagesDto {
   @ApiProperty({ description: '当前页码', example: '1' })
   @IsNotEmpty()
   readonly current: number;
+
+  @ApiProperty({ description: '类型', example: '1' })
+  @IsNotEmpty()
+  readonly taskStatus: number;
 }
 
 // 在线提取视频

@@ -75,27 +75,33 @@ export class ConversionService {
     var cover = details.metaInfo['cover'].replace(/^(.*)\/([^/]*)$/, '$2');
     // 获取音频
     var audioSrc = details.audioSrc.replace(/^(.*)\/([^/]*)$/, '$2');
-    if (cover && audioSrc) {
-      const isDel = await this.qiniuService.batchDeleteFile([
-        'upload/' + cover,
-        'mp3/' + audioSrc,
-      ]);
-      if (!isDel) {
-        return false;
-      }
-      const result = await this.appConversion.deleteMany({ _id: query.id });
-      return !!result
+    var _batchDelete = [];
+    if (cover) {
+      _batchDelete.push('upload/' + cover);
     }
+    if (audioSrc) {
+      _batchDelete.push('mp3/' + audioSrc);
+    }
+    const isDel = await this.qiniuService.batchDeleteFile(_batchDelete);
+    if (!isDel) {
+      return false;
+    }
+    const result = await this.appConversion.deleteMany({ _id: query.id });
+    return !!result
   }
   // 查询用户的转写记录列表
   async list(query: any, user_id: string) {
     const options = {
       type: 'page',
       queryPpage: query.page,
+      limt: 100,
       findField: {
-        user_id
+        user_id,
       }
     };
+    if (query.taskStatus) {
+      options.findField['taskStatus'] = query.taskStatus || 3
+    }
     let data = await this.toolsService.getPageList(options, this.appConversion);
     var resultArr = []
     data.result.map((item) => {
@@ -105,6 +111,8 @@ export class ConversionService {
         type: item.type,
         metaInfo: item.metaInfo,
         taskStatus: item.taskStatus,
+        ext: item.ext,
+        taskId: item.taskId,
         createdAt: dayjs(new Date(item['createdAt'])).format('YYYY-MM-DD HH:mm:ss')
       }
       resultArr.push(_item);
@@ -232,10 +240,10 @@ export class ConversionService {
             }
           }
           // 腾讯语音转写
-          const task_tenncent = await this.tencentAiService.createTask(pcmFilePath, streamsInfo.format.size);
+          const task_tenncent = await this.tencentAiService.createTask({ audioUrl: pcmFilePath }, streamsInfo.format.duration, 'pcm');
           if (task_tenncent) {
-            createOptions.taskDetailed = task_tenncent.sentence_list;
-            createOptions.taskText = task_tenncent.text;
+            createOptions.taskDetailed = task_tenncent['sentence_list'];
+            createOptions.taskText = task_tenncent['text'];
             createOptions.taskStatus = 3;
             createOptions.tempAudio = '';
             const _data = await this.create(createOptions, userId, true);
@@ -259,18 +267,43 @@ export class ConversionService {
     }
   }
   // 重新提交语音转写
-  async tencentAiConversion(id: any) {
+  async tencentAiConversion(id: any, userId: any) {
+    // 获取用户信息
+    var userInfo = await this.appUserModel.findOne({ _id: userId });
     //查询转写记录
     const queryInfo = await this.appConversion.findOne({ _id: id });
-    // 腾讯语音转写
-    const _task_tenncent = await this.tencentAiService.createTask(queryInfo.tempAudio, queryInfo.metaInfo['size']);
-    if (_task_tenncent) {
-      fs.removeSync(queryInfo.tempAudio + '');
-      const _data = await this.appConversion.updateMany({ _id: id }, { $set: { taskDetailed: _task_tenncent.sentence_list, taskText: _task_tenncent.text, taskStatus: 3 } })
-      if (_data) {
-        return !!_data
+    // 上传时时长不够处理的处理同样保存
+    if (userInfo.remaining_time < queryInfo.metaInfo['duration']) {
+      return {
+        code: 2,
       }
     }
+    // 腾讯语音转写
+    const _task_tenncent = await this.tencentAiService.createTask({ audioUrl: queryInfo.tempAudio }, queryInfo.metaInfo['duration'], queryInfo['ext']);
+    if (_task_tenncent) {
+      fs.removeSync(queryInfo.tempAudio + '');
+      const _data = await this.appConversion.updateMany({ _id: id }, { $set: { taskDetailed: _task_tenncent['sentence_list'], taskText: _task_tenncent['text'], taskStatus: 3 } })
+      if (_data) {
+        return {
+          code: 1
+        }
+      }
+    }
+  }
+  // 更新记录
+  async updateManyData(taskId, options) {
+    const _data = await this.appConversion.updateMany({ taskId: taskId }, { $set: options })
+    if (_data) {
+      return !!_data
+    }
+  }
+  // 查询
+  async findTo7() {
+    var _res = await this.appConversion.deleteMany({
+      'ExpirationTime': {
+        $lt: dayjs(new Date()).format(),
+      }
+    })
   }
   // 用户的邀请数据
   async userInvitationRecord(user_id: any) {

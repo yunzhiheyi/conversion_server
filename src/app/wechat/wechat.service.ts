@@ -1,6 +1,5 @@
 
 import { Injectable } from '@nestjs/common';
-import { ReturnModelType } from '@typegoose/typegoose';
 import axios from 'axios';
 import { SystemService } from '../../admin/system/system.service';
 import { CacheService } from '../../utils/redis.service'
@@ -91,7 +90,24 @@ export class WechatService {
     const res = await this.userService.updateManyUser(options);
     return res
   }
-  // 获取小程序手机号
+  // 微信授权登录
+  async wechatAuthLogin(body: any) {
+    const loginInfo = await this.getOpenId(body.logincode, 2);
+    const _data = await this.userService.create('', loginInfo.openid, loginInfo.unionid, body.inviter_code, body.avatarUrl, body.nickName);
+    if (!_data) {
+      return {
+        code: 200,
+        data: false,
+        message: '登录失败'
+      };
+    }
+    return {
+      code: 200,
+      data: _data,
+      message: '登录成功'
+    };
+  }
+  // 获取小程序手机号登录
   async getPhoneNumber(query: any) {
     let access_token = '';
     const redis_access_token = await this.redisService.get('access_token_miniprogram');
@@ -107,14 +123,28 @@ export class WechatService {
         code: query.phonecode,
       },
     )
-    console.log(response.data);
+    if (response.data.errcode) {
+      return {
+        code: response.data.errcode,
+        data: false,
+        message: '授权失败'
+      }
+    }
     if (response) {
       // 查询有无此用户
-      var _data = await this.userService.create(response.data.phone_info.purePhoneNumber, loginInfo.openid, loginInfo.unionid, query.inviter_code);
+      var _data = await this.userService.create(response.data.phone_info.purePhoneNumber, loginInfo.openid, loginInfo.unionid, query.inviter_code, '', '');
       if (!_data) {
-        return null;
+        return {
+          code: 200,
+          data: false,
+          message: '登录失败'
+        };
       }
-      return _data
+      return {
+        code: 200,
+        data: true,
+        message: '登录成功'
+      };
     }
   }
   // 公众号事件回调
@@ -122,12 +152,12 @@ export class WechatService {
     const token = 'yunzhiheyiHejunTuxx', // 自定义，与公众号设置的一致
       signature = query.signature,
       timestamp = query.timestamp,
-      nonce = query.nonce
+      nonce = query.nonce;
     // 字典排序
-    const arr = [token, timestamp, nonce].sort()
-    const sha1 = crypto.createHash('sha1')
-    sha1.update(arr.join(''))
-    const result = sha1.digest('hex')
+    const arr = [token, timestamp, nonce].sort();
+    const sha1 = crypto.createHash('sha1');
+    sha1.update(arr.join(''));
+    const result = sha1.digest('hex');
     // 成功
     return result === signature;
   }

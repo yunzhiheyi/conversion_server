@@ -75,7 +75,7 @@ export class PayService {
       },
       {
         path: 'product_code',
-        select: { _id: 0, payment_price: 1, expir_time: 1 },
+        select: { _id: 0, payment_price: 1, expir_time: 1, name: 1 },
       }]);
   }
   //获取RSA签名返回支付信息给前端
@@ -90,7 +90,7 @@ export class PayService {
     var res = await this.Payment.http.post('/v3/pay/transactions/jsapi', {
       appid: this.appid,
       mchid: this.mch_id,
-      description: 'AI视频语音转换精灵',
+      description: '语音转换精灵_' + orderInfo.product_code['name'] + '充值',
       out_trade_no: orderInfo._id, // 订单号,
       amount: {
         total: (price / 100) * 100,  // 以分为单位

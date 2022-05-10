@@ -28,13 +28,13 @@ export class UserController {
       data: null
     }
     const systemInfo = await this.systemService.getSystemInfo();
-    console.log(systemInfo.whiteUser['includes'](caeatePostUser.mobile));
+    var _info = systemInfo.whiteUser.join(',')
+    console.log(_info.indexOf(caeatePostUser.mobile) > -1);
     // const moblieKey = await this.toolsService.AesEncrypt(caeatePostUser.mobile); //使用手机号加密为KEY
     const mobileCode = await this.redisService.get(caeatePostUser.mobile);
     console.log('mobileCode------', mobileCode);
-    console.log('mobileCode------', systemInfo.whiteUser);
     // 过滤测试手机号验证码
-    if (!systemInfo.whiteUser['includes'](caeatePostUser.mobile)) {
+    if (_info.indexOf(caeatePostUser.mobile) < 0) {
       if (!mobileCode) {
         successData['code'] = 5010;
         successData['message'] = '验证码不存在, 请重新发送短信'
@@ -46,7 +46,7 @@ export class UserController {
         return successData
       }
     }
-    var _data = await this.userService.create(caeatePostUser.mobile, '', '', caeatePostUser.inviter_code); // 直接转空
+    var _data = await this.userService.create(caeatePostUser.mobile, '', '', caeatePostUser.inviter_code, '', ''); // 直接转空
     successData['data'] = _data;
     this.redisService.del(caeatePostUser.mobile)  //登录成功后清除当前验证码
     return successData
@@ -87,7 +87,7 @@ export class UserController {
     // 更新一下登录时间字段
     await this.userService.updateManyUser({
       _id: refreshUserInfo.data.id,
-      last_login_time: Date()
+      last_login_time: dayjs(Date()).format()
     })
     var _newUserInfo = {
       _id: refreshUserInfo.data.id,

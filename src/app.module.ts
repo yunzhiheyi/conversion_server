@@ -21,17 +21,22 @@ import { TypegooseModule } from 'nestjs-typegoose';
 import { BullMQModule } from 'nestjs-bullmq';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '.', 'public'),
     }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.development', '.env.production'],
+    }),
     BullMQModule.forRootAsync({
       name: 'QueueName',
+      inject: [ConfigService],
       useFactory: () => ({
         config: {
-          // url: 'redis://:password@localhost:6379',
-          connection: { host: 'localhost', port: 6379, db: 3, password: 'redis123456' },
+          connection: { host: 'localhost', db: 3, password: 'redis123456' },
         },
       }),
     }),

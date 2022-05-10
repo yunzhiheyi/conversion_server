@@ -7,7 +7,7 @@ import { TencentAiService } from './tencent.ai';
 import { QiniuService } from './qiniu.service';
 import { ToolsService } from './tools.service';
 import glob from 'glob';
-
+var urlencode = require('urlencode');
 // 文件存放路径
 const UPLOAD_DIR = _path.join(__dirname, '../public/upload/')
 // 文件临时存放路径
@@ -59,19 +59,19 @@ export class MiniprogramUploadService {
   async upload(query: any, rawBody: any) {
     const { identifier, index } = query;
     const chunkDir = _path.resolve(TEMP_DIR, identifier);
-    try {
-      fs.writeFileSync(`${chunkDir}/${identifier}-${index}`, rawBody);
-    } catch (err) {
-      console.log(err);
-    }
+    fs.ensureDirSync(chunkDir)
+    fs.writeFileSync(`${chunkDir}/${identifier}-${index}`, rawBody);
     return {
       tempFilePath: `${identifier}-${index}`,
     };
   }
 
+  isNull(data: any) {
+    return (data === "" || data === undefined || data === null);
+  }
   // 合并
   async merge(query: any, userInfo: any) {
-    const { identifier, size, duration, width, height, fileName } = query;
+    const { identifier, size, duration, name, width, height, fileName } = query;
     const chunkDir = _path.resolve(TEMP_DIR, identifier);
     const chunkFiles = fs.readdirSync(chunkDir);
     chunkFiles.sort((a: any, b: any) => a.split('-')[1] - b.split('-')[1]);
@@ -125,18 +125,16 @@ export class MiniprogramUploadService {
         var format = await this.toolsService.ShellExecCmd(_ffprobe, '获取音频流');
         _resformat = JSON.parse(format['data'])
       }
-      var _resMp3 = await this.toolsService.ShellExecCmd(_ffmpegToMp3, 'PCM转MP3');
-      if (_resMp3['success']) {
-        // 将音频提交到七牛云
-        result = await this.qiniuUpload.qiniuPrameter(
-          mp3FilePath + '.mp3',
-          'mp3',
-          identifier + '.mp3',
-        );
-        if (!result || !result.url) {
-          return {
-            code: 3 // 上传封面到七牛云出错
-          }
+      // 如果传过的是MP3 jm
+      if (ext === 'mp3') {
+        fs.moveSync(`${targetFilePath}.${ext}`, `${mp3FilePath}.${ext}`)
+        result = await this.qiniuPrameter(mp3FilePath, identifier);
+        // result = { url: '' }
+      } else {
+        var _resMp3 = await this.toolsService.ShellExecCmd(_ffmpegToMp3, 'PCM转MP3');
+        if (_resMp3['success']) {
+          // 将音频提交到七牛云
+          result = await this.qiniuPrameter(mp3FilePath, identifier);
         }
       }
       if (ext === 'mp4') {
@@ -150,7 +148,7 @@ export class MiniprogramUploadService {
         );
         if (!_cover_result) {
           return {
-            code: 3 // 上传封面到七牛云出错
+            code: 4 // 上传封面到七牛云出错
           }
         } else {
           fs.removeSync(_cover_img);
@@ -158,21 +156,24 @@ export class MiniprogramUploadService {
       }
       var _duration = Math.ceil(parseFloat(duration ? duration : _resformat.format.duration))
       var optionsAudio = {
+        _id: '',
         type: ext === 'mp4' ? 1 : 2,
         metaInfo: {
           fileName:
-            dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.' + ext,
+            this.isNull(name) ? dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.' + ext : decodeURIComponent(name),
           cover: ext === 'mp4' ? _cover_result['url'] : '',
           width: '',
           height: '',
           duration: _duration,  // 如果有时长传过来就入库，没有就读流格式
           size: size,
         },
+        taskId: 0,
         audioSrc: result.url,
-        tempAudio: pcmFilePath + '.pcm',
+        tempAudio: ext === 'mp4' ? `${pcmFilePath}.${ext}` : `${mp3FilePath}.${ext}`,
+        ext: ext,
         taskDetailed: [],
         taskText: '',
-        taskStatus: 2,
+        taskStatus: 1,
       }
       if (width) {
         optionsAudio['width'] = width
@@ -182,8 +183,9 @@ export class MiniprogramUploadService {
       }
       // 上传时时长不够处理的处理同样保存
       if (userInfo.remaining_time < _duration) {
+        optionsAudio.taskStatus = 2; // 转换失败
         return {
-          code: 1, // 成功
+          code: 2, // 时长不足
           data: optionsAudio,
           isUserTimeSub: false
         }
@@ -191,11 +193,22 @@ export class MiniprogramUploadService {
       // 移除音视频
       fs.removeSync(`${targetFilePath}.${ext}`);
       // 腾讯语音转写
-      _task_tenncent = await this.tencentAi.createTask(pcmFilePath + '.pcm', size);
+      _task_tenncent = await this.tencentAi.createTask(
+        {
+          audioUrl: ext === 'mp4' ? pcmFilePath + '.pcm' : `${mp3FilePath}.${ext}`,
+          mp3Url: result.url
+        }, _duration, ext === 'mp4' ? 'pcm' : ext);
       if (_task_tenncent) {
-        optionsAudio.taskDetailed = _task_tenncent.sentence_list;
-        optionsAudio.taskText = _task_tenncent.text;
-        optionsAudio.taskStatus = 3;
+        // 有TaskId代表用的是录音文件转写
+        if (_task_tenncent.TaskId) {
+          optionsAudio.taskId = _task_tenncent.TaskId;
+        } else {// 录音极速版
+          optionsAudio.taskDetailed = _task_tenncent.sentence_list;
+          optionsAudio.taskText = _task_tenncent.text;
+          optionsAudio.taskStatus = 3;
+        }
+        // 成功就清空
+        optionsAudio.tempAudio = '';
         return {
           code: 1, // 成功
           data: optionsAudio,
@@ -205,10 +218,26 @@ export class MiniprogramUploadService {
         }
       } else {
         return {
-          code: 2 // 腾讯AI转写失败
+          code: 3, // 腾讯AI转写失败
         }
       }
     }
+  }
+
+  // 上传七牛云
+  async qiniuPrameter(mp3FilePath: any, identifier: any) {
+
+    var result = await this.qiniuUpload.qiniuPrameter(
+      mp3FilePath + '.mp3',
+      'mp3',
+      identifier + '.mp3',
+    );
+    if (!result || !result['url']) {
+      return {
+        code: 3
+      }
+    }
+    return result
   }
   // 秒杀传验证
   verify(query: any) {

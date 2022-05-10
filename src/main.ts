@@ -14,6 +14,8 @@ import { DashboardModule } from './admin/dashboard/dashboard.module';
 import { ConversionModule } from './app/conversion/conversion.module';
 import { ProjectModule } from './admin/project/project.module';
 import { AppModule } from './app.module';
+import * as dotenv from 'dotenv';
+dotenv.config()
 import { jwtSecret } from './config';
 var redis = require('redis')
 import session from 'express-session';
@@ -29,8 +31,8 @@ import { TransformInterceptor } from './middleware/transform.middleware';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.use(bodyParser.json({ limit: '100mb' }));
-  app.use(bodyParser.raw({ limit: '100mb' }));
+  app.use(bodyParser.json({ limit: '150mb' }));
+  app.use(bodyParser.raw({ limit: '150mb' }));
   app.use(bodyParser.xml());
   // 监听所有的请求路由，并打印日志
   // app.use(logger);
@@ -39,7 +41,8 @@ async function bootstrap() {
     store: new RedisStrore({
       client: redis.createClient({
         password: 'redis123456',
-        db: 0
+        db: 0,
+        port: 6379
       }),
       ttl: 300000
     }),
@@ -73,14 +76,14 @@ async function bootstrap() {
   // app.useGlobalFilters(new HttpExceptionFilter());
   // 服务端Swagger
   const config = new DocumentBuilder()
-    .setTitle('AI转换精灵服务端')
+    .setTitle('语音转换精灵服务端')
     .setDescription('RESTful-API前后端后端服务管理接口')
     .setVersion('1.0.0')
     .build();
   const document = SwaggerModule.createDocument(app, config, { include: [AuserModule, DashboardModule, RoleModule, MenuModule, SystemModule, OrderModule, PriceModule, ProjectModule] });
   // APP端Swagger
   const _config = new DocumentBuilder()
-    .setTitle('AI转换精灵小程序端')
+    .setTitle('语音转换精灵小程序端')
     .setDescription('RESTful-API前后端后端服务管理接口')
     .setVersion('1.0.0')
     .build();

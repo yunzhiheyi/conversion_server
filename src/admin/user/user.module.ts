@@ -14,12 +14,14 @@ import { SystemService } from '../../admin/system/system.service';
 import { SystemInfoModel } from '../../models/admin/system.model';
 import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 import { AppUserModel } from '../../models/app/user.model';
+import { AppRecord } from '../../models/app/record.model';
 import { DatabaseModel } from '../../models/admin/database.model';
+import { AppConversion } from '../../models/app/conversion.model';
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    TypegooseModule.forFeature([AdminUser, DatabaseModel, AppUserModel, AdminMenu, AdminRole, SystemInfoModel]),
+    TypegooseModule.forFeature([AdminUser, AppRecord, AppConversion, DatabaseModel, AppUserModel, AdminMenu, AdminRole, SystemInfoModel]),
   ],
   controllers: [AuserController],
   providers: [

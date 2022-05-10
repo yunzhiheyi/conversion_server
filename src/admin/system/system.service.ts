@@ -74,10 +74,17 @@ export class SystemService {
     }
   }
   // 数据库列表
-  async databaseList(query: any) {
+  async databaseList() {
     var dbBackupPath = _path.join(__dirname, '../../db/');
+    if (!fs.existsSync(dbBackupPath)) {
+      //创建数据库备份父级目录
+      fs.mkdirsSync(dbBackupPath);
+    }
     let components = []
     const files = fs.readdirSync(dbBackupPath)
+    if (!files.length) {
+      return [];
+    }
     files.forEach(function (item, index) {
       let stat = fs.lstatSync(dbBackupPath + item)
       if (stat.isDirectory()) {
@@ -92,9 +99,10 @@ export class SystemService {
         })
       }
     })
-    return components.sort((a, b) => {
+    // 排序后返回
+    return components.length > 0 ? components.sort((a, b) => {
       return b.createdAt < a.createdAt ? -1 : 1
-    })
+    }) : [];
   }
 
   // 删除

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Request, Headers, UseGuards, Query, Req, Res, HttpCode } from '@nestjs/common';
+import { Body, Controller, Get, Post, Request, All, Headers, UseGuards, Query, Req, Res, HttpCode } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ToolsService } from '../../utils/tools.service';
 import { MiniprogramUploadService } from '../../utils/miniprogram.upload';
@@ -92,15 +92,27 @@ export class GenericController {
     var userInfo = await this.toolsService.TokenGetUserInfo(getHeaders['app-access-token'])
     var queryUser = await this.userService.findById(userInfo.data['id']);
     const _res = await this.miniprogramUpload.merge(_Query, queryUser);
+    // console.log(_res);
+    if (!_res['data']) {
+      return {
+        data: false,
+        code: 200,
+        sCode: 3,
+        message: '转写失败'
+      }
+    }
     const _data = await this.conversionService.create(_res['data'], userInfo.data['id'], _res.isUserTimeSub);
     if (_data._id) {
       _data['pcm'] && fs.removeSync(_data['pcm']);
       _data['mp3'] && fs.removeSync(_data['mp3']);
-      var _isStatus = _res['data'].taskStatus !== 2;
+      var _isStatus = _res['data'].taskStatus === 3;
+      var code = _res['code'];
       return {
         id: _data._id,
+        isTask: !!_data.taskId,
         data: _isStatus,
-        message: _isStatus ? '转写成功' : '转写失败, 时长不足',
+        sCode: code,
+        message: code === 1 ? '转写成功' : code === 2 ? '时长不足，转写失败,充值后可在转写记录重新提交' : code === 3 ? '转写失败' : code === 4 ? '七牛去上传失败' : '',
         code: 200
       }
     }
@@ -138,6 +150,7 @@ export class GenericController {
   // 生成txt文档
   @Post('generic/word')
   @HttpCode(200)
+  @UseGuards(AppGuard) // 拦截权限
   @ApiOperation({ summary: '生成word文档' })
   async officegenWord(@Body() _Body: idDto, @Headers() getHeaders: Headers) {
     const _res = await this.genericService.officegenWord(_Body.id);
@@ -147,6 +160,29 @@ export class GenericController {
         data: _res['data'],
         msg: '获取成功'
       };
+    }
+  }
+  // 录音转写任务
+  @All('generic/recTaskCallBack')
+  @HttpCode(200)
+  @ApiOperation({ summary: '录音转写回调' })
+  async recTaskCallBack(@Body() _body, @Req() _req, @Headers() getHeaders: Headers) {
+    var __resultDetail = JSON.parse(_body.resultDetail)
+    var ResultDetail = __resultDetail.map((item) => {
+      return {
+        "text": item.FinalSentence,
+        "start_time": item.StartMs,
+        "end_time": item.EndMs,
+        "speaker_id": 0
+      }
+    })
+    var _data = await this.conversionService.updateManyData(_body.requestId, {
+      taskDetailed: ResultDetail,
+      taskStatus: 3,
+      taskText: _body.text.replace(/\[.*?\]  /g, ""),
+    })
+    if (_data) {
+      console.log('录音转写回调写入成功');
     }
   }
 }

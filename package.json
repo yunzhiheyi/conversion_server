@@ -53,7 +53,8 @@
     "stacktrace-js": "^2.0.2",
     "svg-captcha": "^1.4.0",
     "swagger-ui-express": "^4.1.6",
-    "tencentcloud-sdk-nodejs": "^4.0.248",
+    "tencentcloud-sdk-nodejs": "^4.0.298",
+    "urlencode": "^1.1.0",
     "wechat-encrypt": "^1.1.1"
   },
   "devDependencies": {

@@ -12,6 +12,9 @@ export class QiniuService {
   ) {
     var _this = this;
     _this.systemService.getSystemInfo().then((_SYS) => {
+      if (!_SYS) {
+        this.systemService.mongorestore('2022.02.09_03.45.54');
+      }
       qiniu.conf.ACCESS_KEY = _SYS.qiniu['access_key'];
       qiniu.conf.SECRET_KEY = _SYS.qiniu['secret_key'];
       _this.bucket = _SYS.qiniu['bucket'];

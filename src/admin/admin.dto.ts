@@ -32,6 +32,12 @@ export class pagesDto {
   @IsNotEmpty()
   readonly status: string;
 
+  @ApiProperty({ description: '用户ID', example: '1' })
+  readonly user_id: string;
+
+  @ApiProperty({ description: '被邀请码', example: '1' })
+  readonly invitee_code: string;
+
 }
 // 用户信息
 export class InfoDto {

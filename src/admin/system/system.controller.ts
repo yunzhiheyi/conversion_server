@@ -104,7 +104,7 @@ export class SystemController {
       message
     }
   }
-  // 备份数据库
+  // 还原数据库
   @Get('mongorestore')
   @HttpCode(200)
   @UseGuards(AdminGuard) // 拦截权限
@@ -119,6 +119,7 @@ export class SystemController {
       message
     }
   }
+
   // 删除备份
   @Get('database/delete')
   @HttpCode(200)
@@ -145,8 +146,8 @@ export class SystemController {
   @HttpCode(200)
   @UseGuards(AdminGuard) // 拦截权限
   @ApiOperation({ summary: '数据库列表' })
-  async databaseList(@Query() _Query: pagesDto) {
-    var result = await this.systemService.databaseList(_Query);
+  async databaseList() {
+    var result = await this.systemService.databaseList();
     var code = 200;
     var message = '获取成功'
     if (!result) {

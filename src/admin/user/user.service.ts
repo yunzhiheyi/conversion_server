@@ -8,6 +8,9 @@ import { AdminUser } from '../../models/admin/admin.model';
 import { AppUserModel } from '../../models/app/user.model';
 import { ReturnModelType } from "@typegoose/typegoose";
 import { SnowflakeService } from '@quickts/nestjs-snowflake';
+import { AppConversion } from '../../models/app/conversion.model';
+import { AppRecord } from '../../models/app/record.model';
+import dayjs from 'dayjs';
 @Injectable()
 export class AuserService {
   constructor(
@@ -15,6 +18,10 @@ export class AuserService {
     private readonly userModel: ReturnModelType<typeof AppUserModel>,
     @InjectModel(AdminUser)
     private readonly AdminUserModel: ReturnModelType<typeof AdminUser>,
+    @InjectModel(AppRecord)
+    private readonly recordModel: ReturnModelType<typeof AppRecord>,
+    @InjectModel(AppConversion)
+    private readonly appConversion: ReturnModelType<typeof AppConversion>,
     private readonly toolsService: ToolsService,
     private readonly menuService: MenuService,
     private readonly snowflakeService: SnowflakeService,
@@ -96,6 +103,9 @@ export class AuserService {
   // 更新用户
   async userUpdate(_body: any) {
     const _params = this.toolsService._params(_body);
+    if (_params['password']) {
+      _params['password'] = await this.toolsService.AesEncrypt(_body.password);
+    }
     const result = await this.AdminUserModel.updateMany(
       { _id: _body._id },
       { $set: _params },
@@ -119,17 +129,72 @@ export class AuserService {
     return await this.toolsService.getPageList(options, this.AdminUserModel);
   }
 
+  // 删除、批量删除用户
+  async userAppDelete(query: any) {
+    // 判断是否是批量删除
+    const ids = query.arrids && query.arrids instanceof Array ? query.arrids : [query.id];
+    const result = await this.userModel.deleteMany({ _id: { $in: ids } });
+    return !!result
+  }
+
   // 用户列表
   async AppUserList(query: any) {
     let reg = new RegExp(query.keyword, 'i');
     let findField = {};
     if (query.keyword) {
-      findField['mobile'] = { $regex: reg }
+      findField['nickname'] = { $regex: reg }
     }
     const options = {
       type: 'page',
-      findField
+      findField,
+      queryPpage: query.page,
     };
     return await this.toolsService.getPageList(options, this.userModel);
+  }
+
+  // 用户的转写记录列表
+  async AppConversionList(query: any) {
+    const options = {
+      type: 'page',
+      queryPpage: query.page,
+      findField: {
+        user_id: query.user_id
+      }
+    };
+
+    let data = await this.toolsService.getPageList(options, this.appConversion);
+    var resultArr = []
+    data.result.map((item) => {
+      var _item = {
+        _id: item._id,
+        audioSrc: item.audioSrc,
+        type: item.type,
+        metaInfo: item.metaInfo,
+        taskStatus: item.taskStatus,
+        taskText: item.taskText,
+        createdAt: dayjs(new Date(item['createdAt'])).format('YYYY-MM-DD HH:mm:ss')
+      }
+      resultArr.push(_item);
+    })
+    return {
+      pages: data.pages,
+      result: resultArr,
+      total: data.total
+    };
+  }
+  // 用户的分享记录列表
+  async AppShareList(query: any) {
+    const options = {
+      type: 'page',
+      findField: {
+        invitee_code: query.invitee_code,
+      },
+      queryPpage: query.page,
+    };
+    var resData = await this.toolsService.getPageList(options, this.userModel);
+    // resData.result = resData.result.map((item) => {
+    //   return item.user_id
+    // })
+    return resData
   }
 }

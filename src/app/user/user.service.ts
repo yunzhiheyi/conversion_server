@@ -48,7 +48,7 @@ export class UserService {
     return _data
   }
   // 新建用户
-  async create(mobile: any, openid: any, unionid: any, inviter_code: any) {
+  async create(mobile: any, openid: any, unionid: any, inviter_code: any, avatar: any, nickname: any) {
     const _id = await this.snowflake.nextId();
     const ids = _id && _id.split('');
     const userCount = await this.UserModel.aggregate([{
@@ -63,7 +63,13 @@ export class UserService {
       },
     }
     ]);
-    const user = await this.UserModel.findOne({ mobile }, { __v: 0 });
+    var UserOptions = {}
+    if (mobile) {
+      UserOptions['mobile'] = mobile;
+    } else {
+      UserOptions['unionid'] = unionid;
+    }
+    const user = await this.UserModel.findOne(UserOptions, { __v: 0 });
     var refresh_token = '';
     var access_token = '';
 
@@ -91,10 +97,12 @@ export class UserService {
       _id,
       mobile: mobile,
       openid: openid,
+      avatar: avatar,
       unionid: unionid,
-      nickname: 'AI_' + this.toolsService.generate(8) + "_" + (parseInt(count) + 1),
+      nickname: nickname ? nickname : 'AI_' + this.toolsService.generate(8) + "_" + (parseInt(count) + 1),
       inviter_code: this.toolsService.generate(8),
-      invitee_code: inviter_code // 更新用户的被邀请码
+      invitee_code: inviter_code, // 更新用户的被邀请码
+      is_bind_wechat: nickname ? 1 : 0
     };
 
     let saveData = await this.UserModel.create(createUser);
@@ -114,7 +122,7 @@ export class UserService {
     //邀请好友新用户记录用户邀请记录
     if (inviter_code) {
       const UserInviterCode = await this.UserModel.findOne({ inviter_code }, { __v: 0 });
-      await this.conversionService.AddRecordOrTime(180, UserInviterCode._id + '', 2, 'reM0k3R3Ec', true);
+      await this.conversionService.AddRecordOrTime(180, UserInviterCode._id + '', 1, 'reM0k3R3Ec', true);
     }
     this.redisService.set('UserInfo_' + saveData._id, createInfo, jwtSecret.refreshTokenExpiresIn);
     return {
@@ -131,7 +139,7 @@ export class UserService {
     }
     // 有传是否绑定证明是需要添加时长
     if (body.is_bind_wechat) {
-      updateInfo['$inc'] = { remaining_time: +300 }
+      updateInfo['$inc'] = { remaining_time: +180 }
       // 记录实例ID
       let _id = await this.snowflake.nextId();
       // 记录用户记录
@@ -140,7 +148,7 @@ export class UserService {
         type: 1,
         user_id: body._id,
         recordName: '7nJXTxSv2Z',  // 绑定微信
-        time: 300
+        time: 180
       })
     }
     const user = await this.UserModel.updateMany({ _id: body._id }, updateInfo);

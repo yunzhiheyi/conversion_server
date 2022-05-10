@@ -20,17 +20,22 @@ export class WechatController {
     })
 
   }
-  // 微信授权手机号登录
+  // 微信授权登录
   @Get('wechat/auth')
   @HttpCode(200)
-  @ApiOperation({ summary: '微信授权手机号登录' })
+  @ApiOperation({ summary: '微信授权登录' })
   async wechatAuth(@Query() _Query: codeDto) {
+    const _data = await this.wechatService.wechatAuthLogin(_Query);
+    return _data
+  }
+
+  // 微信授权手机号登录
+  @Get('wechat/phone/auth')
+  @HttpCode(200)
+  @ApiOperation({ summary: '微信授权手机号登录' })
+  async wechatAuthPhone(@Query() _Query: codeDto) {
     const _data = await this.wechatService.getPhoneNumber(_Query);
-    return {
-      code: 200,
-      data: _data,
-      message: '登录成功',
-    }
+    return _data
   }
   // 绑定微信号
   @Post('wechat/bind')
@@ -52,18 +57,18 @@ export class WechatController {
   @ApiOperation({ summary: '关注公众号' })
   async wechatOfficialAccount(@Query() _query: wechatBindofficialAccount, @Req() _req) {
     var eventServer = this.wechatService.eventServerCallback(_query);
+    console.log(eventServer, _query);
     if (eventServer) {
-      let xml = this.wechatEncrypt.decode(_req.body.xml.Encrypt[0]);
-      var EventXml = this.toolsService.parseWechatXML(xml);
-      var userInfo = await this.wechatService.OfficialAccount(EventXml['FromUserName']);
-      if (userInfo['subscribe'] === 1) {
-        await this.wechatService.userAddTime(userInfo.unionid);
-        console.log('关注');
+      if (_req.body.xml) {
+        let xml = this.wechatEncrypt.decode(_req.body.xml.Encrypt[0]);
+        var EventXml = this.toolsService.parseWechatXML(xml);
+        var userInfo = await this.wechatService.OfficialAccount(EventXml['FromUserName']);
+        if (userInfo['subscribe'] === 1) {
+          await this.wechatService.userAddTime(userInfo.unionid);
+          console.log('关注');
+        }
       }
-
-    }
-    if (_query.echostr) {
-      return _query.echostr
+      return _query.echostr;
     } else {
       return ''
     }
