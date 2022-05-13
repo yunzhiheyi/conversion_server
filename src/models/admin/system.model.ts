@@ -43,6 +43,10 @@ export class SystemInfoModel {
   @prop({ type: Array })
   whiteUser: []
 
+  // 提交IOS审核
+  @prop({ type: String, default: '0' })
+  isIosAudit: String
+
   // 数据库备份时间
   @prop({ type: Date })
   backupTime: Date

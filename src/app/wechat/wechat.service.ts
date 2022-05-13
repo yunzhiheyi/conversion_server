@@ -93,7 +93,7 @@ export class WechatService {
   // 微信授权登录
   async wechatAuthLogin(body: any) {
     const loginInfo = await this.getOpenId(body.logincode, 2);
-    const _data = await this.userService.create('', loginInfo.openid, loginInfo.unionid, body.inviter_code, body.avatarUrl, body.nickName);
+    const _data = await this.userService.create({ openid: loginInfo.openid, unionid: loginInfo.unionid, inviter_code: body.inviter_code, avatarUrl: body.avatarUrl, nickName: body.nickName });
     if (!_data) {
       return {
         code: 200,
@@ -132,7 +132,7 @@ export class WechatService {
     }
     if (response) {
       // 查询有无此用户
-      var _data = await this.userService.create(response.data.phone_info.purePhoneNumber, loginInfo.openid, loginInfo.unionid, query.inviter_code, '', '');
+      var _data = await this.userService.create({ mobile: response.data.phone_info.purePhoneNumber, openid: loginInfo.openid, unionid: loginInfo.unionid, inviter_code: query.inviter_code, systemType: query.systemType });
       if (!_data) {
         return {
           code: 200,

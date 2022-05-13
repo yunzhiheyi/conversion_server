@@ -28,6 +28,11 @@ export class CreateUserDto {
   @ApiProperty({ description: '邀请码', example: '111111' })
   @IsNotEmpty()
   readonly inviter_code: string;
+
+  @ApiProperty({ description: '系统类型', example: 'ios' })
+  @IsNotEmpty()
+  readonly systemType: string;
+
 }
 
 export class LoginUserDto {
@@ -63,6 +68,10 @@ export class codeDto {
   @ApiProperty({ description: '邀请码' })
   @IsNotEmpty()
   readonly inviter_code: string;
+
+  @ApiProperty({ description: '系统类型', example: 'ios' })
+  @IsNotEmpty()
+  readonly systemType: string;
 }
 // 刷新Token
 export class RefreshTokenDto {
@@ -158,6 +167,10 @@ export class wechatBindDto {
   @ApiProperty({ description: '用户昵称', example: '用户昵称' })
   @IsNotEmpty()
   readonly nickName: string;
+
+  @ApiProperty({ description: '系统类型', example: 'ios' })
+  @IsNotEmpty()
+  readonly systemType: string;
 }
 
 // 关注公众号回调

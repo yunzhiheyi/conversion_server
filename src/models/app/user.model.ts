@@ -30,6 +30,10 @@ export class AppUserModel {
   @prop({ type: String })
   mobile: String
 
+  // 平台类型
+  @prop({ type: String })
+  systemType: String
+
   // 剩余转换时间
   @prop({ type: Number, default: 0 })
   remaining_time: Number
@@ -61,4 +65,5 @@ export class AppUserModel {
   // 当前状态
   @prop({ type: Number })
   status: Number
+
 }

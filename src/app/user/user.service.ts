@@ -48,7 +48,8 @@ export class UserService {
     return _data
   }
   // 新建用户
-  async create(mobile: any, openid: any, unionid: any, inviter_code: any, avatar: any, nickname: any) {
+  async create(query: any) {
+    const { mobile, openid, unionid, inviter_code, avatar, nickname, systemType } = query;
     const _id = await this.snowflake.nextId();
     const ids = _id && _id.split('');
     const userCount = await this.UserModel.aggregate([{
@@ -99,6 +100,7 @@ export class UserService {
       openid: openid,
       avatar: avatar,
       unionid: unionid,
+      systemType: systemType,
       nickname: nickname ? nickname : 'AI_' + this.toolsService.generate(8) + "_" + (parseInt(count) + 1),
       inviter_code: this.toolsService.generate(8),
       invitee_code: inviter_code, // 更新用户的被邀请码

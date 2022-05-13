@@ -46,7 +46,7 @@ export class UserController {
         return successData
       }
     }
-    var _data = await this.userService.create(caeatePostUser.mobile, '', '', caeatePostUser.inviter_code, '', ''); // 直接转空
+    var _data = await this.userService.create({ mobile: caeatePostUser.mobile, inviter_code: caeatePostUser.inviter_code }); // 直接转空
     successData['data'] = _data;
     this.redisService.del(caeatePostUser.mobile)  //登录成功后清除当前验证码
     return successData
@@ -62,12 +62,23 @@ export class UserController {
   async getUserInfo(@Headers() getHeaders: Headers) {
     var userInfo = await this.toolsService.TokenGetUserInfo(getHeaders['app-access-token'])
     var _data = await this.userService.findById(userInfo.data['id']);
+    // 没有系统类型才添加
+    if (!_data.systemType) {
+      var options = {
+        _id: userInfo.data['id'],
+        systemType: getHeaders['app-system-type'],
+      }
+      await this.userService.updateManyUser(options);
+    }
+    const systemInfo = await this.systemService.getSystemInfo();
+    var _tdata = _data.toJSON({ getters: true })
     if (_data) {
       _data.createAt = dayjs(_data.At).format('YYYY-MM-DD HH:mm:ss')
     }
     return {
       code: 200,
-      data: _data,
+      // 开关审核IOS支付
+      data: { ..._tdata, offonState: systemInfo.isIosAudit },
       success: true
     }
   }

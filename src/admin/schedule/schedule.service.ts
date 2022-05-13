@@ -29,8 +29,10 @@ export class ScheduleService {
     await this.conversionService.findTo7();
   }
 
-  // @Interval(10000)
+  // @Interval(1000)
   // async handleInterval() {
+  //   this.logger.debug(111);
+  //   await this.conversionService.findTo7();
   // }
 
 

@@ -75,16 +75,17 @@ export class MiniprogramUploadService {
     const chunkDir = _path.resolve(TEMP_DIR, identifier);
     const chunkFiles = fs.readdirSync(chunkDir);
     chunkFiles.sort((a: any, b: any) => a.split('-')[1] - b.split('-')[1]);
-    const chunkFilePaths = chunkFiles.map((fileName) =>
-      _path.resolve(chunkDir, fileName),
+    const chunkFilePaths = chunkFiles.map((_fileName) =>
+      _path.resolve(chunkDir, _fileName),
     );
     const targetFilePath = _path.resolve(UPLOAD_DIR, identifier);
     const pcmFilePath = _path.resolve(PCM_DIR, identifier);
     const mp3FilePath = _path.resolve(MP3_DIR, identifier);
     const writeStream = fs.createWriteStream(targetFilePath);
     await this.mergeFiles(chunkFilePaths, writeStream);
-    const { ext } = await FileType.fromFile(targetFilePath);
-    // const ext = targetFilePath.replace(/.+\./, "");
+    // const { ext } = await FileType.fromFile(targetFilePath);
+    const ext = fileName.replace(/.+\./, "");
+    console.log(ext);
     fs.renameSync(targetFilePath, `${targetFilePath}.${ext}`);
     fs.removeSync(chunkDir);
     var _task_tenncent = null;
@@ -160,7 +161,7 @@ export class MiniprogramUploadService {
         type: ext === 'mp4' ? 1 : 2,
         metaInfo: {
           fileName:
-            this.isNull(name) ? dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.' + ext : decodeURIComponent(name),
+            this.isNull(fileName) ? dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.' + ext : decodeURIComponent(fileName),
           cover: ext === 'mp4' ? _cover_result['url'] : '',
           width: '',
           height: '',
@@ -255,8 +256,8 @@ export class MiniprogramUploadService {
       return JSON.stringify({
         needUpload: true,
         uploadedChunks: chunkFiles.map(
-          (fileName) => {
-            var _file: any = fileName.split('-');
+          (_fileName) => {
+            var _file: any = _fileName.split('-');
             return _file[1] * 1
           }),
       });

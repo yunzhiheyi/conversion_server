@@ -297,13 +297,14 @@ export class ConversionService {
       return !!_data
     }
   }
-  // 查询
+  // 删除超过7天的转写记录文本
   async findTo7() {
     var _res = await this.appConversion.deleteMany({
       'ExpirationTime': {
-        $lt: dayjs(new Date()).format(),
+        $lt: new Date(),
       }
     })
+    this.logger.log('共有删除' + _res.deletedCount + '个无用记录')
   }
   // 用户的邀请数据
   async userInvitationRecord(user_id: any) {

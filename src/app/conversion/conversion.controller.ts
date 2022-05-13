@@ -104,13 +104,21 @@ export class ConversionController {
     }
   }
 
-  // 用户邀请记录数据
+  // 用户任务池列表查询结果
   @Post('user/conversion/taskQuery')
   @HttpCode(200)
   @UseGuards(AppGuard) // 拦截权限
   @ApiOperation({ summary: '任务查询结果' })
   async userConversionRecordQuery(@Body() _body: taskId, @Headers() getHeaders: Headers) {
     const _resData = await this.tencentAiService.DescribeTaskStatus(_body.taskId);
+    console.log('--------')
+    if (_resData.StatusStr === 'doing') {
+      return {
+        code: 202,
+        data: null,
+        message: '正在努力转换中',
+      }
+    }
     if (_resData.ResultDetail) {
       var ResultDetail = _resData.ResultDetail.map((item) => {
         return {
@@ -120,16 +128,24 @@ export class ConversionController {
           "speaker_id": 0
         }
       })
-      var _data = await this.conversionService.updateManyData(_resData.TaskId, {
-        taskDetailed: ResultDetail,
-        taskStatus: 3,
-        taskText: _resData.Result.replace(/\[.*?\]  /g, "\n"),
-      })
+    }
+    console.log('--------')
+    var _data = await this.conversionService.updateManyData(_resData.TaskId, {
+      taskDetailed: ResultDetail,
+      taskStatus: 3,
+      taskText: _resData.Result.replace(/\[.*?\]  /g, "\n"),
+    })
+    if (!_data) {
+      return {
+        code: 200,
+        data: null,
+        message: '更新失败',
+      }
     }
     return {
       code: 200,
       data: _resData,
-      message: '查询成功',
+      message: '查询成功1',
     }
   }
 }
