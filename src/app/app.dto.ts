@@ -173,6 +173,34 @@ export class wechatBindDto {
   readonly systemType: string;
 }
 
+// 新建语音转写任务
+export class _bodyData {
+  @ApiProperty({ description: 'id', example: '登录code' })
+  @IsNotEmpty()
+  readonly id: string;
+
+  @ApiProperty({ description: '视频格式', example: '登录code' })
+  @IsNotEmpty()
+  readonly ext: string;
+
+  @ApiProperty({ description: 'PCM路径', example: '用户昵称' })
+  @IsNotEmpty()
+  readonly pcmFilePath: string;
+
+  @ApiProperty({ description: 'MP3路径', example: '用户昵称' })
+  @IsNotEmpty()
+  readonly mp3FilePath: string;
+
+  @ApiProperty({ description: '音视频时长', example: 'ios' })
+  @IsNotEmpty()
+  readonly duration: string;
+
+  @ApiProperty({ description: '线上的mp3地址', example: 'ios' })
+  @IsNotEmpty()
+  readonly audioSrc: string;
+}
+
+
 // 关注公众号回调
 export class wechatBindofficialAccount {
   @ApiProperty({ description: 'signature', example: 'signature' })

@@ -12,6 +12,7 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import _path from 'path';
 import { TencentAiService } from '../../utils/tencent.ai';
+import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 @Injectable()
 export class ConversionService {
   logger: Logger;
@@ -24,6 +25,7 @@ export class ConversionService {
     private readonly appUserModel: ReturnModelType<typeof AppUserModel>,
     private readonly qiniuService: QiniuService,
     private readonly toolsService: ToolsService,
+    private readonly MinuploadService: MiniprogramUploadService,
     private readonly tencentAiService: TencentAiService,
     private readonly snowflakeService: SnowflakeService
   ) {
@@ -246,21 +248,17 @@ export class ConversionService {
             createOptions.taskText = task_tenncent['text'];
             createOptions.taskStatus = 3;
             createOptions.tempAudio = '';
-            const _data = await this.create(createOptions, userId, true);
-            if (_data) {
-              // 移除音视频
-              fs.removeSync(`${pcmFilePath}`);
-              fs.removeSync(`${mp3FilePath}`);
-              fs.removeSync(`${mp4FilePath}`);
-            }
-            return {
-              code: 0,
-              _id: _data._id
-            }
-          } else {
-            return {
-              code: 1,
-            }
+          }
+          const v_data = await this.create(createOptions, userId, true);
+          if (v_data) {
+            // 移除音视频
+            fs.removeSync(`${pcmFilePath}`);
+            fs.removeSync(`${mp3FilePath}`);
+            fs.removeSync(`${mp4FilePath}`);
+          }
+          return {
+            code: 0,
+            _id: v_data._id
           }
         }
       }
@@ -278,10 +276,15 @@ export class ConversionService {
         code: 2,
       }
     }
+    var tempAudio: string = queryInfo.tempAudio.toString();
+    const pcmFilePath = _path.resolve(this.MinuploadService.PCM_DIR, tempAudio);
+    const mp3FilePath = _path.resolve(this.MinuploadService.MP3_DIR, tempAudio);
+    var tempAudio = (queryInfo.ext === 'mp4' ? pcmFilePath + '.pcm' : mp3FilePath + '.mp3');
+    console.log(tempAudio);
     // 腾讯语音转写
-    const _task_tenncent = await this.tencentAiService.createTask({ audioUrl: queryInfo.tempAudio }, queryInfo.metaInfo['duration'], queryInfo['ext']);
+    const _task_tenncent = await this.tencentAiService.createTask({ audioUrl: tempAudio }, queryInfo.metaInfo['duration'], (queryInfo.ext === 'mp4' ? 'pcm' : queryInfo.ext));
     if (_task_tenncent) {
-      fs.removeSync(queryInfo.tempAudio + '');
+      fs.removeSync(tempAudio + '');
       const _data = await this.appConversion.updateMany({ _id: id }, { $set: { taskDetailed: _task_tenncent['sentence_list'], taskText: _task_tenncent['text'], taskStatus: 3 } })
       if (_data) {
         return {
@@ -291,12 +294,13 @@ export class ConversionService {
     }
   }
   // 更新记录
-  async updateManyData(taskId, options) {
-    const _data = await this.appConversion.updateMany({ taskId: taskId }, { $set: options })
+  async updateManyData(id: any, options: any) {
+    const _data = await this.appConversion.updateMany(id, { $set: options })
     if (_data) {
       return !!_data
     }
   }
+
   // 删除超过7天的转写记录文本
   async findTo7() {
     var _res = await this.appConversion.deleteMany({

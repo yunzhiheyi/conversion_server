@@ -8,21 +8,15 @@ import { QiniuService } from './qiniu.service';
 import { ToolsService } from './tools.service';
 import glob from 'glob';
 var urlencode = require('urlencode');
-// 文件存放路径
-const UPLOAD_DIR = _path.join(__dirname, '../public/upload/')
-// 文件临时存放路径
-const TEMP_DIR = _path.resolve(__dirname, '../public/tmp/')
-// PCM文件临时存放路径
-const PCM_DIR = _path.resolve(__dirname, '../public/pcm/')
-// MP3文件临时存放路径
-const MP3_DIR = _path.resolve(__dirname, '../public/mp3/')
-// 视频封面临时存放路径
-const COVER_DIR = _path.resolve(__dirname, '../public/cover/');
-
 // 小程序大文件上传类
 @Injectable()
 export class MiniprogramUploadService {
   public logger: any;
+  UPLOAD_DIR: any;
+  TEMP_DIR: any;
+  PCM_DIR: any;
+  MP3_DIR: any;
+  COVER_DIR: any;
   constructor(
     private readonly tencentAi: TencentAiService,
     private readonly qiniuUpload: QiniuService,
@@ -30,11 +24,21 @@ export class MiniprogramUploadService {
 
   ) {
     this.logger = new Logger('MiniprogramUploadService');
-    fs.ensureDirSync(UPLOAD_DIR);
-    fs.ensureDirSync(TEMP_DIR);
-    fs.ensureDirSync(PCM_DIR);
-    fs.ensureDirSync(MP3_DIR);
-    fs.ensureDirSync(COVER_DIR);
+    // 文件存放路径
+    this.UPLOAD_DIR = _path.join(__dirname, '../public/upload/')
+    // 文件临时存放路径
+    this.TEMP_DIR = _path.resolve(__dirname, '../public/tmp/')
+    // PCM文件临时存放路径
+    this.PCM_DIR = _path.resolve(__dirname, '../public/pcm/')
+    // MP3文件临时存放路径
+    this.MP3_DIR = _path.resolve(__dirname, '../public/mp3/')
+    // 视频封面临时存放路径
+    this.COVER_DIR = _path.resolve(__dirname, '../public/cover/');
+    fs.ensureDirSync(this.UPLOAD_DIR);
+    fs.ensureDirSync(this.TEMP_DIR);
+    fs.ensureDirSync(this.PCM_DIR);
+    fs.ensureDirSync(this.MP3_DIR);
+    fs.ensureDirSync(this.COVER_DIR);
   }
   public mergeFiles(chunkFilePaths: any[], writeStream: any) {
     return new Promise<void>((resolve) => {
@@ -58,7 +62,7 @@ export class MiniprogramUploadService {
   // 上传
   async upload(query: any, rawBody: any) {
     const { identifier, index } = query;
-    const chunkDir = _path.resolve(TEMP_DIR, identifier);
+    const chunkDir = _path.resolve(this.TEMP_DIR, identifier);
     fs.ensureDirSync(chunkDir)
     fs.writeFileSync(`${chunkDir}/${identifier}-${index}`, rawBody);
     return {
@@ -67,24 +71,33 @@ export class MiniprogramUploadService {
   }
 
   isNull(data: any) {
-    return (data === "" || data === undefined || data === null);
+    return (data === "" || data === undefined || data === null || data === 'undefined');
   }
   // 合并
   async merge(query: any, userInfo: any) {
     const { identifier, size, duration, name, width, height, fileName } = query;
-    const chunkDir = _path.resolve(TEMP_DIR, identifier);
+    const chunkDir = _path.resolve(this.TEMP_DIR, identifier);
     const chunkFiles = fs.readdirSync(chunkDir);
     chunkFiles.sort((a: any, b: any) => a.split('-')[1] - b.split('-')[1]);
     const chunkFilePaths = chunkFiles.map((_fileName) =>
       _path.resolve(chunkDir, _fileName),
     );
-    const targetFilePath = _path.resolve(UPLOAD_DIR, identifier);
-    const pcmFilePath = _path.resolve(PCM_DIR, identifier);
-    const mp3FilePath = _path.resolve(MP3_DIR, identifier);
+    const targetFilePath = _path.resolve(this.UPLOAD_DIR, identifier);
+    const pcmFilePath = _path.resolve(this.PCM_DIR, identifier);
+    const mp3FilePath = _path.resolve(this.MP3_DIR, identifier);
     const writeStream = fs.createWriteStream(targetFilePath);
     await this.mergeFiles(chunkFilePaths, writeStream);
-    // const { ext } = await FileType.fromFile(targetFilePath);
-    const ext = fileName.replace(/.+\./, "");
+    // 文件名可能为空
+    let ext = '';
+    if (fileName !== 'undefined' && fileName) {
+      ext = fileName.replace(/.+\./, "");
+    } else {
+      const fileExt = await FileType.fromFile(targetFilePath);
+      console.log('------fileExt');
+      console.log(fileExt);
+      ext = fileExt.ext;
+    }
+    console.log(typeof fileName);
     console.log(ext);
     fs.renameSync(targetFilePath, `${targetFilePath}.${ext}`);
     fs.removeSync(chunkDir);
@@ -109,7 +122,7 @@ export class MiniprogramUploadService {
       '.mp3';
     // 音频是没有封面图
     if (ext === 'mp4') {
-      var _cover_img = COVER_DIR + '/' + identifier + '.jpg';
+      var _cover_img = this.COVER_DIR + '/' + identifier + '.jpg';
       // 截图第一帧为封面图
       var _coverImage =
         'ffmpeg -i ' +
@@ -170,7 +183,7 @@ export class MiniprogramUploadService {
         },
         taskId: 0,
         audioSrc: result.url,
-        tempAudio: ext === 'mp4' ? `${pcmFilePath}.${ext}` : `${mp3FilePath}.${ext}`,
+        tempAudio: identifier,  // 记录音频文件名
         ext: ext,
         taskDetailed: [],
         taskText: '',
@@ -193,38 +206,67 @@ export class MiniprogramUploadService {
       }
       // 移除音视频
       fs.removeSync(`${targetFilePath}.${ext}`);
-      // 腾讯语音转写
-      _task_tenncent = await this.tencentAi.createTask(
-        {
-          audioUrl: ext === 'mp4' ? pcmFilePath + '.pcm' : `${mp3FilePath}.${ext}`,
-          mp3Url: result.url
-        }, _duration, ext === 'mp4' ? 'pcm' : ext);
-      if (_task_tenncent) {
-        // 有TaskId代表用的是录音文件转写
-        if (_task_tenncent.TaskId) {
-          optionsAudio.taskId = _task_tenncent.TaskId;
-        } else {// 录音极速版
-          optionsAudio.taskDetailed = _task_tenncent.sentence_list;
-          optionsAudio.taskText = _task_tenncent.text;
-          optionsAudio.taskStatus = 3;
-        }
-        // 成功就清空
-        optionsAudio.tempAudio = '';
-        return {
-          code: 1, // 成功
-          data: optionsAudio,
-          isUserTimeSub: true,
-          pcm: pcmFilePath + '.pcm',
-          mp3: mp3FilePath + '.mp3'
-        }
-      } else {
-        return {
-          code: 3, // 腾讯AI转写失败
-        }
+      // // 腾讯语音转写
+      // _task_tenncent = await this.tencentAi.createTask(
+      //   {
+      //     audioUrl: ext === 'mp4' ? pcmFilePath + '.pcm' : `${mp3FilePath}.${ext}`,
+      //     mp3Url: result.url
+      //   }, _duration, ext === 'mp4' ? 'pcm' : ext);
+      // if (_task_tenncent) {
+      //   // 有TaskId代表用的是录音文件转写
+      //   if (_task_tenncent.TaskId) {
+      //     optionsAudio.taskId = _task_tenncent.TaskId;
+      //   } else {// 录音极速版
+      //     optionsAudio.taskDetailed = _task_tenncent.sentence_list;
+      //     optionsAudio.taskText = _task_tenncent.text;
+      //     optionsAudio.taskStatus = 3;
+      //   }
+      //   // 成功就清空
+      //   optionsAudio.tempAudio = '';
+      // } else {
+      //   return {
+      //     code: 3, // 腾讯AI转写失败
+      //   }
+      // }
+      return {
+        code: 1, // 成功
+        data: optionsAudio,
+        isUserTimeSub: true,
+        pcm: pcmFilePath + '.pcm',
+        mp3: mp3FilePath + '.mp3'
       }
     }
   }
-
+  // 腾讯语音转写 任务
+  async tencentAicreateTask(data: any) {
+    var optionsAudio = {
+      taskId: '',
+      taskText: '',
+      taskDetailed: [],
+      taskStatus: null,
+      tempAudio: '',
+    }
+    var _task_tenncent = await this.tencentAi.createTask(
+      {
+        audioUrl: data.ext === 'mp4' ? data.pcmFilePath : data.mp3FilePath,
+        mp3Url: data.audioSrc
+      }, data.duration, data.ext === 'mp4' ? 'pcm' : data.ext);
+    if (_task_tenncent) {
+      // 有TaskId代表用的是录音文件转写
+      if (_task_tenncent.TaskId) {
+        optionsAudio.taskId = _task_tenncent.TaskId;
+      } else {// 录音极速版
+        optionsAudio.taskDetailed = _task_tenncent.sentence_list;
+        optionsAudio.taskText = _task_tenncent.text;
+        optionsAudio.taskStatus = 3;
+      }
+      // 成功就清空
+      optionsAudio.tempAudio = '';
+      return optionsAudio
+    } else {
+      return null;
+    }
+  }
   // 上传七牛云
   async qiniuPrameter(mp3FilePath: any, identifier: any) {
 
@@ -244,14 +286,14 @@ export class MiniprogramUploadService {
   verify(query: any) {
     const { identifier } = query;
     console.log(`identifier ${identifier}, verify`);
-    const matchs = glob.sync(`${identifier}.*`, { cwd: UPLOAD_DIR });
+    const matchs = glob.sync(`${identifier}.*`, { cwd: this.UPLOAD_DIR });
     if (matchs.length) {
       return JSON.stringify({
         needUpload: false,
-        url: _path.resolve(UPLOAD_DIR, matchs[0]),
+        url: _path.resolve(this.UPLOAD_DIR, matchs[0]),
       });
     } else {
-      const chunkDir = _path.resolve(TEMP_DIR, identifier);
+      const chunkDir = _path.resolve(this.TEMP_DIR, identifier);
       const chunkFiles = fs.readdirSync(chunkDir);
       return JSON.stringify({
         needUpload: true,

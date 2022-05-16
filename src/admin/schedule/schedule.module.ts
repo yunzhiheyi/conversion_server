@@ -16,6 +16,7 @@ import { ToolsService } from 'src/utils/tools.service';
 import { TencentAiService } from 'src/utils/tencent.ai';
 import { CryptoModule } from '@akanass/nestjsx-crypto';
 import { DatabaseModel } from '../../models/admin/database.model';
+import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 @Module({
   imports: [
     CryptoModule,
@@ -30,6 +31,7 @@ import { DatabaseModel } from '../../models/admin/database.model';
     QiniuService,
     SystemService,
     TencentAiService,
+    MiniprogramUploadService,
     ConversionService,
     ToolsService
   ],

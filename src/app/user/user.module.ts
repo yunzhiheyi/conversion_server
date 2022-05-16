@@ -16,6 +16,7 @@ import { AppRecord } from '../../models/app/record.model';
 import { QiniuService } from '../../utils/qiniu.service';
 import { TencentAiService } from '../../utils/tencent.ai';
 import { DatabaseModel } from '../../models/admin/database.model';
+import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 @Module({
   imports: [
     CryptoModule,
@@ -29,6 +30,7 @@ import { DatabaseModel } from '../../models/admin/database.model';
     QiniuService,
     TencentAiService,
     ConversionService,
+    MiniprogramUploadService,
     ToolsService,
     CacheService
   ],

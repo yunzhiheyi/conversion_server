@@ -16,6 +16,7 @@ import { ConversionService } from '../../app/conversion/conversion.service';
 import { DatabaseModel } from '../../models/admin/database.model';
 import { QiniuService } from '../../utils/qiniu.service';
 import { TencentAiService } from '../../utils/tencent.ai';
+import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 @Module({
   imports: [
     CryptoModule,
@@ -31,6 +32,7 @@ import { TencentAiService } from '../../utils/tencent.ai';
     QiniuService,
     SystemService,
     TencentAiService,
+    MiniprogramUploadService,
     ToolsService
   ],
 })

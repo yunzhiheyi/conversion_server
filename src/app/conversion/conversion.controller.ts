@@ -2,9 +2,12 @@
 import { Body, Controller, Get, Post, Request, Headers, UseGuards, Query, Req, Res, HttpCode } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConversionService } from './conversion.service';
-import { idDto, pagesDto, UrlDto, taskId } from '../app.dto';
+import { idDto, pagesDto, UrlDto, taskId, _bodyData } from '../app.dto';
 import { AppGuard } from '../app.guard';
+import fs from 'fs-extra';
+import _path from 'path';
 import { TencentAiService } from 'src/utils/tencent.ai';
+import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 import { ToolsService } from 'src/utils/tools.service';
 @Controller('app')
 @ApiTags('转写')
@@ -12,8 +15,10 @@ export class ConversionController {
   constructor(
     private readonly conversionService: ConversionService,
     private readonly toolsService: ToolsService,
+    private readonly MinuploadService: MiniprogramUploadService,
     private readonly tencentAiService: TencentAiService,
-  ) { }
+  ) {
+  }
   // 转写详情查询
   @Get('conversion/query')
   @HttpCode(200)
@@ -104,6 +109,42 @@ export class ConversionController {
     }
   }
 
+  // 新建转写任务
+  @Post('user/conversion/taskCreate')
+  @HttpCode(200)
+  @UseGuards(AppGuard) // 拦截权限
+  @ApiOperation({ summary: '新建转写任务' })
+  async tencentAicreateTask(@Body() _body: idDto, @Headers() getHeaders: Headers) {
+    var queryData = await this.conversionService.query(_body);
+    var tempAudio: string = queryData.tempAudio.toString();
+    const pcmFilePath = _path.resolve(this.MinuploadService.PCM_DIR, tempAudio);
+    const mp3FilePath = _path.resolve(this.MinuploadService.MP3_DIR, tempAudio);
+    const options = {
+      ext: queryData['ext'],
+      pcmFilePath: pcmFilePath + '.pcm',
+      mp3FilePath: mp3FilePath + '.mp3',
+      duration: queryData['metaInfo']['duration'],
+      audioSrc: queryData['audioSrc']
+    }
+    // 异步语音获取
+    const _data = await this.MinuploadService.tencentAicreateTask(options);
+    // 异步语音获取
+    // 获取到数据就更新
+    if (_data) {
+      pcmFilePath && fs.removeSync(pcmFilePath);
+      mp3FilePath && fs.removeSync(mp3FilePath);
+      await this.conversionService.updateManyData({ _id: _body.id }, _data)
+
+      // 添加小程序推送通知
+
+    }
+    return {
+      code: 200,
+      data: _data,
+      message: '获取成功',
+    }
+  }
+
   // 用户任务池列表查询结果
   @Post('user/conversion/taskQuery')
   @HttpCode(200)
@@ -111,7 +152,6 @@ export class ConversionController {
   @ApiOperation({ summary: '任务查询结果' })
   async userConversionRecordQuery(@Body() _body: taskId, @Headers() getHeaders: Headers) {
     const _resData = await this.tencentAiService.DescribeTaskStatus(_body.taskId);
-    console.log('--------')
     if (_resData.StatusStr === 'doing') {
       return {
         code: 202,
@@ -129,8 +169,7 @@ export class ConversionController {
         }
       })
     }
-    console.log('--------')
-    var _data = await this.conversionService.updateManyData(_resData.TaskId, {
+    var _data = await this.conversionService.updateManyData({ taskId: _resData.TaskId }, {
       taskDetailed: ResultDetail,
       taskStatus: 3,
       taskText: _resData.Result.replace(/\[.*?\]  /g, "\n"),
@@ -145,7 +184,7 @@ export class ConversionController {
     return {
       code: 200,
       data: _resData,
-      message: '查询成功1',
+      message: '查询成功',
     }
   }
 }

@@ -151,6 +151,7 @@ export class PayService {
   async decryptNotify(data: any) {
     const { event_type, resource } = this.Payment.notify(data);
     let orderInfo = await this.getOrderInfo(resource.out_trade_no);
+    console.log(event_type, resource);
     // 支付成功后回调一次后就不走了，防止微信多次回调
     if (event_type === 'TRANSACTION.SUCCESS' && orderInfo.status !== 'PAY_SUCCESS') {
       // 更新订单状态

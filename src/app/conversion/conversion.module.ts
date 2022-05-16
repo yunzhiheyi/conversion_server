@@ -14,6 +14,7 @@ import { AppRecord } from '../../models/app/record.model';
 import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 import { DatabaseModel } from '../../models/admin/database.model';
 import { TencentAiService } from '../../utils/tencent.ai';
+import { MiniprogramUploadService } from '../../utils/miniprogram.upload';
 @Module({
   imports: [
     CryptoModule,
@@ -26,6 +27,7 @@ import { TencentAiService } from '../../utils/tencent.ai';
   providers: [
     QiniuService,
     TencentAiService,
+    MiniprogramUploadService,
     ToolsService,
     SystemService,
     ConversionService,
