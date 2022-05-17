@@ -86,8 +86,9 @@ export class ConversionController {
       return {
         code: 200,
         id: _data._id,
-        data: !_data.code,
-        message: !_data.code ? '获取成功' : '转写失败, 时长不足',
+        data: true,
+        sCode: !_data.code ? 0 : 2,
+        message: '获取成功',
       }
     }
   }
@@ -131,12 +132,10 @@ export class ConversionController {
     // 异步语音获取
     // 获取到数据就更新
     if (_data) {
-      pcmFilePath && fs.removeSync(pcmFilePath);
-      mp3FilePath && fs.removeSync(mp3FilePath);
+      pcmFilePath && fs.removeSync(pcmFilePath + '.pcm');
+      mp3FilePath && fs.removeSync(mp3FilePath + '.mp3');
       await this.conversionService.updateManyData({ _id: _body.id }, _data)
-
       // 添加小程序推送通知
-
     }
     return {
       code: 200,

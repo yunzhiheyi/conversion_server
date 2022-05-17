@@ -28,6 +28,7 @@ import { HttpExceptionFilter } from './filter/http-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { logger } from './middleware/logger.middleware';
 import { TransformInterceptor } from './middleware/transform.middleware';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 

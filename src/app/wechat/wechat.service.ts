@@ -93,7 +93,7 @@ export class WechatService {
   // 微信授权登录
   async wechatAuthLogin(body: any) {
     const loginInfo = await this.getOpenId(body.logincode, 2);
-    const _data = await this.userService.create({ openid: loginInfo.openid, unionid: loginInfo.unionid, inviter_code: body.inviter_code, avatarUrl: body.avatarUrl, nickName: body.nickName });
+    const _data = await this.userService.create({ openid: loginInfo.openid, unionid: loginInfo.unionid, inviter_code: body.inviter_code, avatarUrl: body.avatarUrl, nickName: body.nickName, systemType: body.systemType });
     if (!_data) {
       return {
         code: 200,
@@ -164,7 +164,6 @@ export class WechatService {
   // 新用户关注后添加时长
   async userAddTime(unionid: any) {
     var userInfo = await this.userService.findOneUpdateInfo({ unionid })
-    console.log(userInfo);
     // 如果关注过就不再添加时长
     if (userInfo['isConcern'] === 1) {
       return;

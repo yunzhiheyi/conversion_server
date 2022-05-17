@@ -227,38 +227,23 @@ export class ConversionService {
               duration: parseInt(streamsInfo.format.duration),
               size: streamsInfo.format.size,
             },
+            taskId: 0,
             audioSrc: result.url,
-            tempAudio: pcmFilePath,
+            ext: 'mp4',
             taskDetailed: [],
             taskText: '',
-            taskStatus: 2,
+            taskStatus: 1,
+            tempAudio: timeDir,
+          }
+          if (userInfo.remaining_time < streamsInfo.format.duration) {
+            createOptions.taskStatus = 2;// 转换失败
           }
           // 上传时时长不够处理的处理同样保存
-          if (userInfo.remaining_time < streamsInfo.format.duration) {
-            const _data = await this.create(createOptions, userId, false);
-            return {
-              code: 2,
-              _id: _data._id
-            }
-          }
-          // 腾讯语音转写
-          const task_tenncent = await this.tencentAiService.createTask({ audioUrl: pcmFilePath }, streamsInfo.format.duration, 'pcm');
-          if (task_tenncent) {
-            createOptions.taskDetailed = task_tenncent['sentence_list'];
-            createOptions.taskText = task_tenncent['text'];
-            createOptions.taskStatus = 3;
-            createOptions.tempAudio = '';
-          }
-          const v_data = await this.create(createOptions, userId, true);
-          if (v_data) {
-            // 移除音视频
-            fs.removeSync(`${pcmFilePath}`);
-            fs.removeSync(`${mp3FilePath}`);
-            fs.removeSync(`${mp4FilePath}`);
-          }
+          const _data = await this.create(createOptions, userId, userInfo.remaining_time > streamsInfo.format.duration);
+          fs.removeSync(`${mp4FilePath}`);
           return {
-            code: 0,
-            _id: v_data._id
+            code: userInfo.remaining_time < streamsInfo.format.duration ? 2 : 0,
+            _id: _data._id
           }
         }
       }

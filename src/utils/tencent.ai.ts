@@ -110,6 +110,7 @@ export class TencentAiService {
     if (_result.data) {
       this.logger.log('转写成功!')
     }
+
     return _result.data.flash_result[0];
   }
   // 新建任务转写
