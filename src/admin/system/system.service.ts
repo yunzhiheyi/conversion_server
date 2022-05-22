@@ -48,7 +48,11 @@ export class SystemService {
       //创建数据库备份父级目录
       fs.mkdirsSync(dbBackupPath);
     }
-    const cmd = 'mongodump -h 127.0.0.1:27017 -d conversionDB -o ' + todayBackUpPath;
+    if (!fs.existsSync(todayBackUpPath)) {
+      // 创建备份时间文件夹
+      fs.mkdirsSync(todayBackUpPath);
+    }
+    const cmd = 'docker exec mongo sh -c mongodump -h 127.0.0.1:27017 -d conversionDB -o ' + todayBackUpPath;
     var data = await this.toolsService.ShellExecCmd(cmd, '数据库备份');
     var _id = await this.snowflakeService.nextId();
     if (data['success']) {
@@ -65,7 +69,8 @@ export class SystemService {
   // 数据库还原
   async mongorestore(_id: any) {
     var mongorestorePath = _path.join(__dirname, '../../db/' + _id + '/conversionDB');
-    const cmd = 'mongorestore -h 127.0.0.1:27017 -d conversionDB --drop ' + mongorestorePath;
+    console.log(mongorestorePath);
+    const cmd = 'docker exec mongo sh -c mongorestore -h 127.0.0.1:27017 -d conversionDB --drop ' + mongorestorePath;
     this.logger.log('正在还原数据...')
     var data = await this.toolsService.ShellExecCmd(cmd, '数据库还原');
     if (data['success']) {

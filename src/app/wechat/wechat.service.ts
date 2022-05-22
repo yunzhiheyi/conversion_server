@@ -175,4 +175,42 @@ export class WechatService {
       return !!_res
     }
   }
+  // 消息推送
+  async sendTemplateMsg(openid: any, access_token: any) {
+    const url = `https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${access_token}`; //发送模板消息的接口
+    const requestData = { //发送模板消息的数据
+      touser: openid || 'oqLu45ZwBWOrd9BKHf3U6YklwLDM',
+      template_id: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      url: 'http://weixin.qq.com/download',
+      data: {
+        first: {
+          value: '身份信息',
+          color: "#173177"
+        },
+        keyword1: {
+          value: '张三',
+          color: '#1d1d1d'
+        },
+        keyword2: {
+          value: '男',
+          color: '#1d1d1d'
+        },
+        keyword3: {
+          value: '45',
+          color: '#1d1d1d'
+        },
+        remark: {
+          value: '已登记！',
+          color: '#173177'
+        }
+      }
+    };
+    const response = await axios.post(
+      `https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${access_token}`,
+      requestData,
+    )
+    if (response) {
+      console.log(response);
+    }
+  }
 }

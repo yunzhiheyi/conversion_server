@@ -148,18 +148,10 @@ export class ConversionService {
   async parse(url: any, userId: any) {
     // 获取用户信息
     var userInfo = await this.appUserModel.findOne({ _id: userId });
-    let timeDir = new Date().getTime() + ''
+    let timeDir = await this.snowflakeService.nextId() + ''
     let flieMp4Name = `${timeDir}.mp4`;
-    let flieMp3Name = `${timeDir}.mp3`;
-    let fliePcmName = `${timeDir}.pcm`;
-    // PCM文件临时存放路径
-    const PCM_DIR = _path.resolve(__dirname, '../../public/pcm/')
-    // MP3文件临时存放路径
-    const MP3_DIR = _path.resolve(__dirname, '../../public/mp3/')
     // 文件存放路径
     const UPLOAD_DIR = _path.join(__dirname, '../../public/upload/')
-    const pcmFilePath = _path.resolve(PCM_DIR, fliePcmName);
-    const mp3FilePath = _path.resolve(MP3_DIR, flieMp3Name);
     const mp4FilePath = _path.resolve(UPLOAD_DIR, flieMp4Name);
     this.logger.log('正在识别视频中...')
     const { data } = await axios.post('https://api-sv.videoparse.cn/api/customparse/parse', "appid=nDc8IiUO3J55EURa&appsecret=Y9W1fssu8m9la4o1&url=" + url, {
@@ -179,105 +171,49 @@ export class ConversionService {
     // 下载视频流
     const resData = await this.downloadVideo(data.body.video_info.url, mp4FilePath)
     if (resData) {
-      var result = null;
       var streamsInfo = null;
       var createOptions = null;
-      var _ffmpeg =
-        'ffmpeg  -i ' +
-        `${mp4FilePath}` +
-        ' -vn -f s16le -ac 1 -ar 16000 -acodec pcm_s16le ' +
-        pcmFilePath;
-      var _ffmpegToMp3 =
-        'ffmpeg -y -ac 1 -ar 16000 -f s16le -i ' +
-        pcmFilePath +
-        ' -c:a libmp3lame -q:a 2 ' +
-        mp3FilePath;
       var _ffprobe =
         'ffprobe -i ' +
         `${mp4FilePath}` +
         ' -print_format json -show_streams -show_format -v 0';
-      // 提取音频转为pcm
-      var _res = await this.toolsService.ShellExecCmd(_ffmpeg, '视频转PCM');
-      if (_res['success']) {
-        var videoStreamsInfo = await this.toolsService.ShellExecCmd(_ffprobe, '读取视频流信息');
-        // 视频信息格式化
-        streamsInfo = JSON.parse(videoStreamsInfo['data']);
-        var _resMp3 = await this.toolsService.ShellExecCmd(_ffmpegToMp3, 'PCM转MP3');
-        if (_resMp3['success']) {
-          // 将音频提交到七牛云
-          result = await this.qiniuService.qiniuPrameter(
-            mp3FilePath,
-            'mp3',
-            timeDir + '.mp3',
-          );
-          if (!result || !result.url) {
-            this.toolsService.logger.warn('上传到七牛去错误')
-          }
+      var videoStreamsInfo = await this.toolsService.ShellExecCmd(_ffprobe, '读取视频流信息');
+      // 视频信息格式化
+      streamsInfo = JSON.parse(videoStreamsInfo['data']);
+      // 音频转换成功
+      if (videoStreamsInfo['success']) {
+        createOptions = {
+          type: 1,
+          metaInfo: {
+            fileName:
+              dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.mp4',
+            cover: data.body.video_info.cover,
+            width: streamsInfo.streams.width,
+            height: streamsInfo.streams.height,
+            duration: parseInt(streamsInfo.format.duration),
+            size: streamsInfo.format.size,
+          },
+          taskId: 0,
+          audioSrc: '',
+          ext: 'mp4',
+          taskDetailed: [],
+          taskText: '',
+          taskStatus: 1,
+          tempAudio: timeDir,
         }
-        // 音频转换成功
-        if (videoStreamsInfo['success']) {
-          createOptions = {
-            type: 1,
-            metaInfo: {
-              fileName:
-                dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss') + '.mp4',
-              cover: data.body.video_info.cover,
-              width: streamsInfo.streams.width,
-              height: streamsInfo.streams.height,
-              duration: parseInt(streamsInfo.format.duration),
-              size: streamsInfo.format.size,
-            },
-            taskId: 0,
-            audioSrc: result.url,
-            ext: 'mp4',
-            taskDetailed: [],
-            taskText: '',
-            taskStatus: 1,
-            tempAudio: timeDir,
-          }
-          if (userInfo.remaining_time < streamsInfo.format.duration) {
-            createOptions.taskStatus = 2;// 转换失败
-          }
-          // 上传时时长不够处理的处理同样保存
-          const _data = await this.create(createOptions, userId, userInfo.remaining_time > streamsInfo.format.duration);
-          fs.removeSync(`${mp4FilePath}`);
-          return {
-            code: userInfo.remaining_time < streamsInfo.format.duration ? 2 : 0,
-            _id: _data._id
-          }
+        if (userInfo.remaining_time < streamsInfo.format.duration) {
+          createOptions.taskStatus = 2;// 转换失败
         }
-      }
-    }
-  }
-  // 重新提交语音转写
-  async tencentAiConversion(id: any, userId: any) {
-    // 获取用户信息
-    var userInfo = await this.appUserModel.findOne({ _id: userId });
-    //查询转写记录
-    const queryInfo = await this.appConversion.findOne({ _id: id });
-    // 上传时时长不够处理的处理同样保存
-    if (userInfo.remaining_time < queryInfo.metaInfo['duration']) {
-      return {
-        code: 2,
-      }
-    }
-    var tempAudio: string = queryInfo.tempAudio.toString();
-    const pcmFilePath = _path.resolve(this.MinuploadService.PCM_DIR, tempAudio);
-    const mp3FilePath = _path.resolve(this.MinuploadService.MP3_DIR, tempAudio);
-    var tempAudio = (queryInfo.ext === 'mp4' ? pcmFilePath + '.pcm' : mp3FilePath + '.mp3');
-    console.log(tempAudio);
-    // 腾讯语音转写
-    const _task_tenncent = await this.tencentAiService.createTask({ audioUrl: tempAudio }, queryInfo.metaInfo['duration'], (queryInfo.ext === 'mp4' ? 'pcm' : queryInfo.ext));
-    if (_task_tenncent) {
-      fs.removeSync(tempAudio + '');
-      const _data = await this.appConversion.updateMany({ _id: id }, { $set: { taskDetailed: _task_tenncent['sentence_list'], taskText: _task_tenncent['text'], taskStatus: 3 } })
-      if (_data) {
+        // 上传时时长不够处理的处理同样保存
+        const _data = await this.create(createOptions, userId, userInfo.remaining_time > streamsInfo.format.duration);
         return {
-          code: 1
+          code: userInfo.remaining_time < streamsInfo.format.duration ? 2 : 0,
+          _id: _data._id
         }
       }
     }
   }
+
   // 更新记录
   async updateManyData(id: any, options: any) {
     const _data = await this.appConversion.updateMany(id, { $set: options })

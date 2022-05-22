@@ -58,6 +58,7 @@ export class TencentAiService {
   // 语音转写新建任务
   async createTask(audioData, _duration, voice_format) {
     var resData: any;
+    // console.log(audioData, _duration, voice_format);
     // 大于30分钟
     if ((_duration / 60) > 30) {
       resData = await this.CreateRecTask(audioData, voice_format);
@@ -107,11 +108,53 @@ export class TencentAiService {
       maxContentLength: 1048576000,
       maxBodyLength: 1048576000
     });
-    if (_result.data) {
+    if (!_result.data.code) {
       this.logger.log('转写成功!')
+      return {
+        code: 0,
+        flash_result: _result.data.flash_result[0]
+      }
+    } else {
+      var _msg = ''
+      switch (_result.data.code) {
+        case 4001:
+          _msg = '参数不合法';
+        case 4002:
+          _msg = '鉴权失败';
+        case 4004:
+          _msg = '无可使用的免费额度';
+        case 4005:
+          _msg = '账户欠费停止服务，请及时充值';
+        case 4006:
+          _msg = '账号当前调用并发超限';
+        case 4007:
+          _msg = '音频解码失败，请检查上传音频数据格式与调用参数一致';
+        case 4008:
+          _msg = '客户端数据上传超时';
+        case 4009:
+          _msg = '客户端连接断开';
+        case 4010:
+          _msg = '客户端上传未知文本消息';
+        case 4011:
+          _msg = '音频数据太大';
+        case 4012:
+          _msg = '音频数据为空';
+        case 5001:
+          _msg = '后台错误，请重试';
+        case 5002:
+          _msg = '音频识别失败';
+        case 5003:
+          _msg = '音频识别超时';
+        default:
+          this.logger.log('其他错误');
+      }
+      this.logger.error(_msg)
+      return {
+        code: _result.data.code,
+        msg: _msg,
+        flash_result: null
+      }
     }
-
-    return _result.data.flash_result[0];
   }
   // 新建任务转写
   async CreateRecTask(audioData, voice_format) {
@@ -124,27 +167,45 @@ export class TencentAiService {
       "SpeakerDiarization": 1, //是否开启说话人分离
       'SpeakerNumber': 0,
       'Url': audioData.mp3Url,
-      'CallbackUrl': 'https://junr.mynatapp.cc/api/app/generic/recTaskCallBack',// 成功回调
+      'CallbackUrl': 'https://conversion-api.maxbox.com.cn/api/app/generic/recTaskCallBack',// 成功回调
     };
     this.logger.log('正在转写语音...')
     var resData = await this.asrClient.CreateRecTask(params);
     if (resData['Data']) {
       this.logger.log('转写成功');
-      return resData['Data'];
-    } else {
-      switch (resData['Error']['Code']) {
-        case 'FailedOperation.ErrorDownFile':
-          this.logger.log('下载音频文件失败');
-        case 'FailedOperation.ServiceIsolate':
-          this.logger.log('账号因为欠费停止服务，请在腾讯云账户充值。');
-        case 'FailedOperation.ErrorRecognize':
-          this.logger.log('识别失败。');
-        case 'FailedOperation.UserHasNoFreeAmount':
-          this.logger.log('	下载音频文件失败');
-        default:
-          this.logger.log('	其他错误_' + resData['Response']['Error']['Code']);
+      return {
+        code: 0,
+        msg: '转写成功',
+        flash_result: resData['Data']
       }
-      return resData['Error']
+    } else {
+      var _msg = '';
+      switch (resData['Error']['Code']) {
+        case 'FailedOperation.ServiceIsolate':
+          _msg = '账号因为欠费停止服务，请在腾讯云账户充值';
+        case 'FailedOperation.ErrorRecognize':
+          _msg = '识别失败。';
+        case 'FailedOperation.UserHasNoFreeAmount':
+          _msg = '账号本月免费额度已用完';
+        case 'InternalError.ErrorDownFile':
+          _msg = '下载音频文件失败';
+        case 'MissingParameter':
+          _msg = '参数错误';
+        case 'InvalidParameterValue':
+          _msg = '参数取值错误';
+        case 'MissingParameter':
+          _msg = '缺少参数错误';
+        case 'UnknownParameter':
+          _msg = '未知参数错误';
+        default:
+          this.logger.log('	其他错误');
+      }
+      this.logger.error(_msg)
+      return {
+        code: resData['Error']['Code'],
+        msg: _msg,
+        flash_result: null
+      }
     }
   }
   // 新建任务回调
@@ -154,11 +215,33 @@ export class TencentAiService {
     };
     this.logger.log('正在查询...')
     var resData = await this.asrClient.DescribeTaskStatus(params);
-    if (resData) {
+    if (resData['Data']) {
       this.logger.log('查询成功...')
       return resData['Data']
     } else {
-      this.logger.log('查询失败...', resData)
+      var _msg = '';
+      switch (resData['Error']['Code']) {
+        case 'FailedOperation.ServiceIsolate':
+          _msg = '账号因为欠费停止服务，请在腾讯云账户充值';
+        case 'FailedOperation.ErrorRecognize':
+          _msg = '识别失败。';
+        case 'FailedOperation.UserHasNoFreeAmount':
+          _msg = '账号本月免费额度已用完';
+        case 'InternalError.ErrorDownFile':
+          _msg = '下载音频文件失败';
+        case 'MissingParameter':
+          _msg = '参数错误';
+        case 'InvalidParameterValue':
+          _msg = '参数取值错误';
+        case 'MissingParameter':
+          _msg = '缺少参数错误';
+        case 'UnknownParameter':
+          _msg = '未知参数错误';
+        default:
+          this.logger.log('	其他错误');
+      }
+      this.logger.error(_msg)
+      return resData['Error']
     }
   }
 }

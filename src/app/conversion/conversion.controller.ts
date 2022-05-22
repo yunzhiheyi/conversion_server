@@ -46,20 +46,7 @@ export class ConversionController {
       message: '删除成功',
     }
   }
-  // 重新提交转写
-  @Post('conversion/resubmit')
-  @HttpCode(200)
-  @UseGuards(AppGuard) // 拦截权限
-  @ApiOperation({ summary: '重新提交转写' })
-  async conversionResubmit(@Body() _body: idDto, @Headers() getHeaders: Headers) {
-    var userInfo = await this.toolsService.TokenGetUserInfo(getHeaders['app-access-token'])
-    const _data = await this.conversionService.tencentAiConversion(_body.id, userInfo.data['id']);
-    return {
-      code: 200,
-      data: _data.code,
-      message: _data.code === 1 ? '转写成功' : '时长不足，请充值',
-    }
-  }
+
   // 转写列表
   @Get('conversion/list')
   @HttpCode(200)
@@ -120,6 +107,7 @@ export class ConversionController {
     var tempAudio: string = queryData.tempAudio.toString();
     const pcmFilePath = _path.resolve(this.MinuploadService.PCM_DIR, tempAudio);
     const mp3FilePath = _path.resolve(this.MinuploadService.MP3_DIR, tempAudio);
+    const mp4FilePath = _path.resolve(this.MinuploadService.UPLOAD_DIR, tempAudio);
     const options = {
       ext: queryData['ext'],
       pcmFilePath: pcmFilePath + '.pcm',
@@ -128,19 +116,50 @@ export class ConversionController {
       audioSrc: queryData['audioSrc']
     }
     // 异步语音获取
-    const _data = await this.MinuploadService.tencentAicreateTask(options);
-    // 异步语音获取
+    const _TaskData = await this.MinuploadService.tencentAicreateTask(options);
     // 获取到数据就更新
-    if (_data) {
+    if (!_TaskData.code) {
       pcmFilePath && fs.removeSync(pcmFilePath + '.pcm');
       mp3FilePath && fs.removeSync(mp3FilePath + '.mp3');
-      await this.conversionService.updateManyData({ _id: _body.id }, _data)
+      mp4FilePath && fs.removeSync(mp4FilePath + '.mp4');
+      await this.conversionService.updateManyData({ _id: _body.id }, _TaskData.data)
       // 添加小程序推送通知
+    } else {
+      await this.conversionService.updateManyData({ _id: _body.id }, {
+        taskStatus: 2
+      })
     }
     return {
       code: 200,
-      data: _data,
-      message: '获取成功',
+      sCode: _TaskData.code,
+      data: !_TaskData.code ? _TaskData.data : false,
+      message: _TaskData.msg,
+    }
+  }
+
+  // 新建音频转写任务
+  @Post('user/conversion/taskAudioCreate')
+  @HttpCode(200)
+  @UseGuards(AppGuard) // 拦截权限
+  @ApiOperation({ summary: '新建音频转写任务' })
+  async taskAudioCreate(@Body() _body: idDto, @Headers() getHeaders: Headers) {
+    var queryData = await this.conversionService.query(_body);
+    // 异步语音获取
+    const _TaskData = await this.MinuploadService.AudioTask(queryData);
+    // 获取到数据就更新
+    if (!_TaskData.code) {
+      await this.conversionService.updateManyData({ _id: _body.id }, {
+        'metaInfo.cover': _TaskData.data.cover, audioSrc: _TaskData.data.audioSrc
+      })
+    } else {
+      await this.conversionService.updateManyData({ _id: _body.id }, {
+        taskStatus: 2
+      })
+    }
+    return {
+      code: 200,
+      data: !_TaskData.code ? _TaskData.data : false,
+      message: _TaskData.msg,
     }
   }
 

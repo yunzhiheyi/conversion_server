@@ -8,14 +8,22 @@ const WechatEncrypt = require('wechat-encrypt')
 @Controller('app')
 @ApiTags('微信相关')
 export class WechatController {
-  public wechatEncrypt: any
+  public wechatEncryptP: any
+  public wechatEncryptMP: any
   constructor(
     private readonly wechatService: WechatService,
     private readonly toolsService: ToolsService,
   ) {
-    this.wechatEncrypt = new WechatEncrypt({
+    // 公众号
+    this.wechatEncryptP = new WechatEncrypt({
       appId: 'wxf82de3718bc8822a',
       encodingAESKey: 'llLMSMIpB07CyORG46pMiHFcje29PRM32i1Nz46yDRw',
+      token: 'yunzhiheyiHejunTuxx'
+    })
+    // 小程序
+    this.wechatEncryptMP = new WechatEncrypt({
+      appId: 'wx696febd34285c030',
+      encodingAESKey: 'uOk3OtdsWwZLGlQrS6WWRGYSEZCmOj6xNCr8UuVMZzd',
       token: 'yunzhiheyiHejunTuxx'
     })
 
@@ -57,16 +65,20 @@ export class WechatController {
   @ApiOperation({ summary: '关注公众号' })
   async wechatOfficialAccount(@Query() _query: wechatBindofficialAccount, @Req() _req) {
     var eventServer = this.wechatService.eventServerCallback(_query);
-    console.log(eventServer, _query);
     if (eventServer) {
+      console.log(_req.body);
       if (_req.body.xml) {
-        let xml = this.wechatEncrypt.decode(_req.body.xml.Encrypt[0]);
+        let xml = this.wechatEncryptP.decode(_req.body.xml.Encrypt[0]);
+        console.log(xml);
         var EventXml = this.toolsService.parseWechatXML(xml);
         var userInfo = await this.wechatService.OfficialAccount(EventXml['FromUserName']);
         if (userInfo['subscribe'] === 1) {
           await this.wechatService.userAddTime(userInfo.unionid);
           console.log('关注');
         }
+      } else {
+        let data = this.wechatEncryptMP.decode(_req.body.Encrypt);
+        console.log(data);
       }
       return _query.echostr;
     } else {

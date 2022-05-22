@@ -92,44 +92,15 @@ export class GenericController {
     var userInfo = await this.toolsService.TokenGetUserInfo(getHeaders['app-access-token'])
     var queryUser = await this.userService.findById(userInfo.data['id']);
     const _res = await this.miniprogramUpload.merge(_Query, queryUser);
-    // console.log(_res);
-    if (!_res['data']) {
-      return {
-        data: false,
-        code: 200,
-        sCode: 3,
-        message: '转写失败'
-      }
-    }
     const resData = _res['data'];
     const _data = await this.conversionService.create(resData, userInfo.data['id'], _res.isUserTimeSub);
-    const options = {
-      ext: resData['ext'],
-      pcmFilePath: _res['pcm'],
-      mp3FilePath: _res['mp3'],
-      duration: resData['metaInfo']['duration'],
-      audioSrc: resData['audioSrc']
-    }
-    console.log('_____1');
     if (_data._id) {
-      var _isStatus = _res['data'].taskStatus === 1;
       var code = _res['code'];
-      // // 异步语音获取
-      // const Task_data = await this.miniprogramUpload.tencentAicreateTask(options);
-      // // 获取到数据就更新
-      // if (Task_data) {
-      //   console.log('_____2');
-      //   _data['pcm'] && fs.removeSync(_data['pcm']);
-      //   _data['mp3'] && fs.removeSync(_data['mp3']);
-      //   await this.conversionService.updateManyData(_data._id, Task_data)
-      // }
-      // console.log('_____3');
       return {
         id: _data._id,
-        // isTask: !!_data.taskId,
-        data: _isStatus,
+        data: code === 1,
         sCode: code,
-        message: code === 1 ? '转写成功' : code === 2 ? '时长不足，转写失败,充值后可在转写记录重新提交' : code === 3 ? '转写失败' : code === 4 ? '七牛去上传失败' : '',
+        message: code === 1 ? '合并成功' : code === 2 ? '时长不足，转写失败,充值后可在转写记录重新提交' : code === 3 ? '合并失败' : '',
         code: 200
       }
     }

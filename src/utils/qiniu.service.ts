@@ -51,7 +51,7 @@ export class QiniuService {
     });
   }
   // 删除空间文件
-  deleteFile(key) {
+  deleteFile(key: any) {
     return new Promise((resolve, reject) => {
       this.bucketManager.delete(this.bucket, key, (err, respBody, respInfo) => {
         if (err) {
