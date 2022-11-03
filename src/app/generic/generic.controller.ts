@@ -2,13 +2,16 @@ import { Body, Controller, Get, Post, Request, All, Headers, UseGuards, Query, R
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ToolsService } from '../../utils/tools.service';
 import { MiniprogramUploadService } from '../../utils/miniprogram.upload';
-import { SendsmsDto, MiniprogramFileDto, idDto } from '../app.dto';
+import { QiniuService } from '../../utils/qiniu.service';
+import { SendsmsDto, MiniprogramFileDto, idDto, FileDto } from '../app.dto';
 import fs from 'fs-extra';
 import { GenericService } from './generic.service';
 import { ConversionService } from '../conversion/conversion.service';
 import { CacheService } from '../../utils/redis.service';
 import { AppGuard } from '../app.guard';
+import _path from 'path';
 import { UserService } from '../user/user.service';
+var formidable = require("formidable");
 @Controller('app')
 @ApiTags('通用')
 export class GenericController {
@@ -19,6 +22,7 @@ export class GenericController {
     private readonly userService: UserService,
     private readonly conversionService: ConversionService,
     private readonly miniprogramUpload: MiniprogramUploadService,
+    private readonly qiniuService: QiniuService,
   ) { }
   // 发送验证码
   @Post('generic/sendsms')
@@ -119,6 +123,48 @@ export class GenericController {
     // const _data = await this.conversionService.create(_res['data']);
     return {
       code: 200
+    }
+  }
+
+  // 测试
+  @Post('upload/flie')
+  @HttpCode(200)
+  @ApiOperation({ summary: '文件上传' })
+  async uploadFile(@Body() _Body, @Req() _req, @Res() _res) {
+    var data = await this.genericService.uploadFile(_Body);
+    var form = new formidable.IncomingForm();
+    form.parse(_req, function (err, fields, files) {
+      console.log('fields============' + fields);
+      console.log('files============' + files);
+      console.log('fields:' + JSON.stringify(fields));
+      console.log('files:' + JSON.stringify(files));
+      var keys = Object.keys(files);
+      keys.forEach(function (key) {
+        if (!files[key]) {
+          return;
+        }
+        var extname = _path.extname(files[key].newFilename);
+        //改名
+        fs.rename(files[key].filepath, _path.join(__dirname, '../../public/upload/') + key + '.mp4', () => {
+          console.log('上传成功', _path.join(__dirname, '../../public/upload/') + key + '.mp4')
+        })
+      });
+    });
+  }
+
+  // 获取token
+  @Get('generic/qiuniu/token')
+  @HttpCode(200)
+  @ApiOperation({ summary: '获取token' })
+  async QiuniuToken(@Query() _Query: FileDto) {
+    console.log(_Query)
+    var _key = _Query.fileName;
+    var token = this.qiniuService.uptoken(_key);
+    console.log(token);
+    return {
+      code: 200,
+      data: token,
+      msg: '获取token成功'
     }
   }
 

@@ -10,6 +10,7 @@ var execCmd = require('child_process').exec;
 @Injectable()
 export class ToolsService {
   logger: Logger;
+  retArr: any = [];
   constructor(
     private readonly _aesService: AesService,
   ) {
@@ -260,5 +261,571 @@ export class ToolsService {
       verify(token, jwtSecret.secret, (err: any, data: any) => resolve({ err, data }));
     });
     return userInfo;
+  }
+  getIndexArray(tableTree: any, name: any, key: any) {
+    let indexArray = [];
+    for (let index = 0; index < tableTree.length; index++) {
+      const element = tableTree[index];
+      if (element[key] === name) {
+        indexArray.push({ value: element.value + '', name: element[key] })
+        break;
+      } else {
+        if (element.submenu && element.submenu.length > 0) {
+          let newArray = this.getIndexArray(element.submenu, name, key);
+          if (!newArray.length) {
+            continue;
+          }
+          indexArray.push({ value: element.value + '', name: element[key] });
+          indexArray = indexArray.concat(newArray)
+        }
+      }
+    }
+    return indexArray
+  }
+  // 获取楼层
+  getLevel(key: any) {
+    var arr = [
+      {
+        name: 'Low Floor', // 低层
+        value: 17005001,
+      },
+      {
+        name: 'Middle Floor', // 中层
+        value: 17005002,
+      },
+      {
+        name: 'High Floor',
+        value: 17005003
+      }, // 高层Middle Floor
+      {
+        name: 'Ground Floor', // 地面
+        value: 17005004,
+      },
+      {
+        name: 'With the basement', // 带地下室
+        value: 17005005,
+      },
+      {
+        name: 'Penthouse', // 地面
+        value: 17005006,
+      },
+    ]
+    // console.log('getLevel', arr.find((item) => item.name === key), key);
+    return arr.find((item) => item.name === key) || { value: 17020001, name: 'N/A' };
+  }
+  // 获取产权
+  getTenure(key: any) {
+    var arr = [
+      {
+        name: 'Freehold',
+        value: 17004003,
+      },
+      {
+        name: '99-year Leasehold',
+        value: 17004001,
+      },
+      {
+        name: '103-year Leasehold',
+        value: 17004004
+      }, // 高层
+      {
+        name: '110-year Leasehold',
+        value: 17004005,
+      },
+      {
+        name: '999-year Leasehold',
+        value: 17004002,
+      },
+      {
+        name: '9999-year Leasehold',
+        value: 17004006,
+      },
+      {
+        name: 'Unknown Tenure',
+        value: 17004007,
+      },
+    ]
+    // console.log('getTenure', arr.find((item) => item.name === key), key);
+    return arr.find((item) => item.name === key) || { value: 17020001, name: 'N/A' };
+  }
+  // 类型
+  getTypeName() {
+    return [
+      {
+        enName: 'N/A',
+        value: 17020001,
+        zhName: 'N/A',
+        selected: false,
+      },
+      {
+        enName: 'Residential',
+        value: 16001,
+        zhName: '住宅',
+        selected: false,
+        submenu: [
+          {
+            enName: 'N/A',
+            value: 17020001,
+            zhName: 'N/A',
+            selected: false,
+          },
+          {
+            enName: 'Condos',
+            zhName: '私宅',
+            value: 16001001,
+            selected: false,
+            submenu: [
+              {
+                enName: 'N/A',
+                value: 17020001,
+                zhName: 'N/A',
+                selected: false,
+              },
+              {
+                enName: 'Condominium',
+                zhName: 'Condominium',
+                value: 16001001001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Apartmentp',
+                zhName: 'Apartmentp',
+                value: 16001001002,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Walk-up',
+                zhName: 'Walk-up',
+                value: 16001001003,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Cluster House',
+                zhName: 'Cluster House',
+                value: 16001001004,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Excutive Condominium',
+                zhName: 'Excutive Condominium',
+                value: 16001001005,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+          {
+            enName: 'HDB',
+            zhName: '组屋',
+            selected: false,
+            value: 16001002,
+            submenu: [
+              {
+                enName: '1-Room/ Studio',
+                zhName: '1-Room/ Studio',
+                value: 16001002001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '2A',
+                zhName: '2A',
+                value: 16001002002,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '21 (lmproved)',
+                zhName: '21 (lmproved',
+                value: 16001002003,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '2S (Standard)',
+                zhName: '2S (Standard)',
+                value: 16001002004,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3A',
+                zhName: '3A',
+                value: 16001002005,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3NG (NewGeneration)',
+                zhName: '3NG (NewGeneration)',
+                value: 16001002006,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3A (Modified)',
+                zhName: '3A (Modified)',
+                value: 16001002007,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3NG (Modified)',
+                zhName: '3NG (Modified)',
+                value: 16001002008,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '31 (lmproved)',
+                zhName: '31 (lmproved)',
+                value: 16001002009,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3l (Modified)',
+                zhName: '3l (Modified)',
+                value: 16001002010,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3S (Simplified)',
+                zhName: '3S (Simplified)',
+                value: 16001002011,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '3STD (Standard)',
+                zhName: '3STD (Standard)',
+                value: 16001002012,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '4A',
+                zhName: '4A',
+                value: 16001002013,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '4NG (New Generation)',
+                zhName: '4NG (New Generation)',
+                value: 16001002014,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '4S (Simplified)',
+                zhName: '4S (Simplified)',
+                value: 16001002015,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '4l (lmproved)',
+                zhName: '4l (lmproved)',
+                value: 16001002016,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '4STD (Standard)',
+                zhName: '4STD (Standard)',
+                value: 16001002017,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '5A',
+                zhName: '5A',
+                value: 16001002018,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '5I',
+                zhName: '5I',
+                value: 16001002019,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: '5S',
+                zhName: '5S',
+                value: 16001002020,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Jumbo',
+                zhName: 'Jumbo',
+                value: 16001002021,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'EA (Exec Apartment)',
+                zhName: 'EA (Exec Apartment)',
+                value: 16001002022,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'EM (Exec Maisonette)',
+                zhName: 'EM (Exec Maisonette)',
+                value: 16001002023,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'MG (Multi-Generation)',
+                zhName: 'MG (Multi-Generation)',
+                value: 16001002024,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Terrace',
+                zhName: 'Terrace',
+                value: 16001002025,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+          {
+            enName: 'Landed',
+            zhName: '有地',
+            value: 16001003,
+            selected: false,
+            submenu: [
+              {
+                enName: 'Terraced House',
+                zhName: 'Terraced House',
+                value: 16001003001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Detached House',
+                zhName: 'Detached House',
+                value: 16001003002,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Semi-Detached House',
+                zhName: 'Semi-Detached House',
+                value: 16001003003,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Corner Terrace',
+                zhName: 'Corner Terrace',
+                value: 16001003004,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Bungalow House',
+                zhName: 'Bungalow House',
+                value: 16001003005,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Good Class Bungalow',
+                zhName: 'Good Class Bungalow',
+                value: 16001003006,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Shophouse',
+                zhName: 'Shophouse',
+                value: 16001003007,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Land Only',
+                zhName: 'Land Only',
+                value: 16001003008,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Town House',
+                zhName: 'Town House',
+                value: 16001003009,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Conservation House',
+                zhName: 'Conservation House',
+                value: 16001003010,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Cluster House',
+                zhName: 'Cluster House',
+                value: 16001003011,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Landed',
+                zhName: 'Landed',
+                value: 16001003012,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+        ],
+      },
+      {
+        enName: 'Business',
+        value: 16002,
+        selected: false,
+        zhName: '商业',
+        submenu: [
+          {
+            enName: 'Retail',
+            value: 16002001,
+            selected: false,
+            zhName: '零售',
+            submenu: [
+              {
+                enName: 'Mall Shop',
+                zhName: 'Mall Shop',
+                value: 16002001001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Shop/shophouse',
+                zhName: 'Shop/shophouse',
+                value: 16002001002,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Food&Beverage',
+                zhName: 'Food&Beverage',
+                value: 16002001003,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Medical',
+                zhName: 'Medical',
+                value: 16002001004,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Other Retail',
+                zhName: 'Other Retail',
+                value: 16002001005,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+          {
+            enName: 'Offices',
+            value: 16002002,
+            selected: false,
+            zhName: '办公',
+            submenu: [
+              {
+                enName: 'Offices',
+                zhName: 'Offices',
+                value: 16002002001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Business/Science Park',
+                zhName: 'Business/Science Park',
+                value: 16002002002,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+          {
+            enName: 'Industry',
+            value: 16002003,
+            selected: false,
+            zhName: '工业',
+            submenu: [
+              {
+                enName: 'Light Industrial(B1)',
+                zhName: 'Light Industrial(B1)',
+                value: 16002003001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Factory/Workshop(B2)',
+                zhName: 'Factory/Workshop(B2)',
+                value: 16002003002,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Warehouse',
+                zhName: 'Warehouse',
+                value: 16002003003,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Dormitory',
+                zhName: 'Dormitory',
+                value: 16002003004,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+          {
+            enName: 'Landed',
+            value: 16002004,
+            selected: false,
+            zhName: '有地',
+            submenu: [
+              {
+                enName: 'Land Only',
+                zhName: 'Land Only',
+                value: 16002004001,
+                selected: false,
+                submenu: []
+              },
+              {
+                enName: 'Land with Building/En-bloc',
+                zhName: 'Land with Building/En-bloc',
+                value: 16002004002,
+                selected: false,
+                submenu: []
+              },
+            ],
+          },
+        ],
+      },
+    ]
   }
 }

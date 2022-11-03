@@ -1,4 +1,4 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 // 后台帐号
 export class aUserDto {
@@ -39,6 +39,136 @@ export class pagesDto {
   readonly invitee_code: string;
 
 }
+
+export class KaolaBody {
+  @ApiProperty({ description: 'communityIds' })
+  @IsEmpty()
+  readonly communityIds: [];
+
+  @ApiProperty({ description: 'accountId' })
+  @IsEmpty()
+  readonly accountId: number;
+
+  @ApiProperty({ description: 'account_id' })
+  @IsEmpty()
+  readonly account_id: string;
+
+  @ApiProperty({ description: '_id' })
+  @IsEmpty()
+  readonly _id: string;
+}
+
+// kaola 数据库 小区
+export class KaolaCommunityBody {
+  @ApiProperty({ description: 'add_detail' })
+  @IsNotEmpty()
+  readonly add_detail: string;
+
+  @ApiProperty({ description: 'add_post' })
+  @IsNotEmpty()
+  readonly add_post: string;
+
+  @ApiProperty({ description: 'add_one' })
+  @IsNotEmpty()
+  readonly add_one: number;
+
+  @ApiProperty({ description: 'add_three' })
+  @IsNotEmpty()
+  readonly add_three: number;
+
+  @ApiProperty({ description: 'add_two' })
+  @IsNotEmpty()
+  readonly add_two: number;
+
+  @ApiProperty({ description: 'architect' })
+  @IsNotEmpty()
+  readonly architect: string;
+
+  @ApiProperty({ description: 'bulid_year' })
+  @IsNotEmpty()
+  readonly bulid_year: string;
+
+  @ApiProperty({ description: 'buliding_pic' })
+  @IsEmpty()
+  readonly buliding_pic: [];
+
+  @ApiProperty({ description: 'buliding_video' })
+  @IsEmpty()
+  readonly buliding_video: [];
+
+  @ApiProperty({ description: 'community_name' })
+  @IsNotEmpty()
+  readonly community_name: string;
+
+  @ApiProperty({ description: 'community_setting' })
+  @IsEmpty()
+  readonly community_setting: [];
+
+  @ApiProperty({ description: 'floor_size' })
+  @IsEmpty()
+  readonly floor_size: number;
+
+  @ApiProperty({ description: 'household' })
+  @IsEmpty()
+  readonly household: number;
+
+  @ApiProperty({ description: 'layout_pic' })
+  @IsEmpty()
+  readonly layout_pic: string;
+
+  @ApiProperty({ description: 'loc_lat' })
+  @IsNotEmpty()
+  readonly loc_lat: number;
+
+  @ApiProperty({ description: 'loc_lng' })
+  @IsNotEmpty()
+  readonly loc_lng: number;
+
+  @ApiProperty({ description: 'mangement_pic' })
+  @IsEmpty()
+  readonly mangement_pic: [];
+
+  @ApiProperty({ description: 'mangement_video' })
+  @IsEmpty()
+  readonly mangement_video: [];
+
+  @ApiProperty({ description: 'setting_pic' })
+  @IsEmpty()
+  readonly setting_pic: [];
+
+  @ApiProperty({ description: 'setting_video' })
+  @IsEmpty()
+  readonly setting_video: [];
+
+  @ApiProperty({ description: 'spider_community_id' })
+  @IsEmpty()
+  readonly spider_community_id: string;
+
+  @ApiProperty({ description: 'surrounding_pic' })
+  @IsEmpty()
+  readonly surrounding_pic: [];
+
+  @ApiProperty({ description: 'surrounding_video' })
+  @IsEmpty()
+  readonly surrounding_video: [];
+
+  @ApiProperty({ description: 'tenure' })
+  @IsNotEmpty()
+  readonly tenure: number;
+
+  @ApiProperty({ description: 'type_one' })
+  @IsNotEmpty()
+  readonly type_one: number;
+
+  @ApiProperty({ description: 'type_two' })
+  @IsNotEmpty()
+  readonly type_two: number;
+
+  @ApiProperty({ description: 'type_three' })
+  @IsNotEmpty()
+  readonly type_three: number;
+
+}
 // 用户信息
 export class InfoDto {
   @ApiProperty({ description: '用户ID', example: '1' })
@@ -69,6 +199,16 @@ export class IdsDto {
   @ApiProperty({ description: '数组ID' })
   @IsNotEmpty()
   readonly id: [];
+}
+
+// 菜单ID
+export class housingIdDto {
+  @ApiProperty({ description: 'ID' })
+  @IsNotEmpty()
+  readonly id: string;
+  @ApiProperty({ description: '房源类型' })
+  @IsNotEmpty()
+  readonly house_classify: string;
 }
 
 // 菜单ID

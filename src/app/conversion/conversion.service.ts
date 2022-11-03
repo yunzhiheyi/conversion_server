@@ -15,7 +15,7 @@ import { TencentAiService } from '../../utils/tencent.ai';
 import { MiniprogramUploadService } from 'src/utils/miniprogram.upload';
 @Injectable()
 export class ConversionService {
-  logger: Logger;
+  public logger: Logger;
   constructor(
     @InjectModel(AppConversion)
     private readonly appConversion: ReturnModelType<typeof AppConversion>,
@@ -144,6 +144,35 @@ export class ConversionService {
       }
     })
   }
+  // 在线视频提取保存源文件
+  async onlineParse(url: any) {
+    let timeDir = await this.snowflakeService.nextId() + ''
+    let flieMp4Name = `${timeDir}.mp4`;
+    // 文件存放路径
+    const UPLOAD_DIR = _path.join(__dirname, '../../public/upload/')
+    const mp4FilePath = _path.resolve(UPLOAD_DIR, flieMp4Name);
+    this.logger.log('正在识别视频中...')
+    const { data } = await axios.post('https://api-sv.videoparse.cn/api/customparse/parse', "appid=nDc8IiUO3J55EURa&appsecret=Y9W1fssu8m9la4o1&url=" + url, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8;'
+      }
+    });
+    // 识别有误
+    if (data.code > 0) {
+      this.logger.warn(JSON.stringify(data))
+      return {
+        code: data.code,
+        msg: data.msg
+      }
+    }
+    this.logger.log('识别成功，正在下载视频...')
+    // 下载视频流
+    const resData = await this.downloadVideo(data.body.video_info.url, mp4FilePath)
+    if (resData) {
+      return { code: 200, videoUrl: flieMp4Name }
+    }
+  }
+
   // 在线视频提取
   async parse(url: any, userId: any) {
     // 获取用户信息
@@ -221,7 +250,6 @@ export class ConversionService {
       return !!_data
     }
   }
-
   // 删除超过7天的转写记录文本
   async findTo7() {
     var _res = await this.appConversion.deleteMany({

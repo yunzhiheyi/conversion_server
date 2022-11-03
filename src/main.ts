@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppUserModule } from './app/user/user.module';
+import { AppteleprompterModule } from './app/teleprompter/appteleprompter.module';
 import { PayModule } from './app/pay/pay.module';
 import { AuserModule } from './admin/user/user.module';
 import { SystemModule } from './admin/system/system.module';
@@ -13,6 +14,7 @@ import { PriceModule } from './admin/price/price.module';
 import { DashboardModule } from './admin/dashboard/dashboard.module';
 import { ConversionModule } from './app/conversion/conversion.module';
 import { ProjectModule } from './admin/project/project.module';
+import { kPuppeteerModule } from './admin/puppeteer/kpuppeteer.module';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 dotenv.config()
@@ -88,9 +90,9 @@ async function bootstrap() {
     .setDescription('RESTful-API前后端后端服务管理接口')
     .setVersion('1.0.0')
     .build();
-  const _document = SwaggerModule.createDocument(app, _config, { include: [GenericModule, AppUserModule, PayModule, ConversionModule, WechatModule, RecordModule] });
+  const _document = SwaggerModule.createDocument(app, _config, { include: [kPuppeteerModule, GenericModule, AppUserModule, PayModule, AppteleprompterModule, ConversionModule, WechatModule, RecordModule] });
   SwaggerModule.setup('api-docs/app', app, _document);
   SwaggerModule.setup('api-docs/admin', app, document,);
-  await app.listen(3000);
+  await app.listen(3002);
 }
 bootstrap();

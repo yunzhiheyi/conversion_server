@@ -14,7 +14,7 @@ export class DatabaseModel {
   _id: String
 
   // 备份名称
-  @prop({ items: String })
+  @prop({ name: String })
   name?: String;
 
   // 备份路径

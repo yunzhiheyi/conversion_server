@@ -54,6 +54,15 @@ export class taskId {
   readonly taskId: string;
 }
 
+// 内容
+export class AddEditContentDto {
+  @ApiProperty({ description: '标题', })
+  @IsNotEmpty()
+  readonly title: string;
+  @ApiProperty({ description: '内容', })
+  @IsNotEmpty()
+  readonly content: string;
+}
 // code
 export class codeDto {
   // 手机登录code
@@ -79,6 +88,14 @@ export class RefreshTokenDto {
   @IsNotEmpty()
   readonly token: string;
 }
+// 小程序大文件上传
+export class FileDto {
+  // 文件名称
+  @ApiProperty({ description: '文件名称' })
+  @IsNotEmpty()
+  fileName: string;
+}
+
 
 // 小程序大文件上传
 export class MiniprogramFileDto {

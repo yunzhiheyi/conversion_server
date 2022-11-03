@@ -31,7 +31,7 @@ export class QiniuService {
     return putPolicy.uploadToken();
   }
   // 上传文件
-  async qiniuPrameter(filePaths, path, filePathName) {
+  async qiniuPrameter(filePaths: string, path: string, filePathName: string) {
     const config = new qiniu.conf.Config();
     const formUploader = new qiniu.form_up.FormUploader(config);
     // key 为上传到七牛云后自定义图片的名称

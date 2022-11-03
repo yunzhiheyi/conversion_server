@@ -1,3 +1,7 @@
+import { kPuppeteerModule } from './admin/puppeteer/kpuppeteer.module';
+import { EventsModule } from './admin/events/events.module';
+import { AppteleprompterModule } from './app/teleprompter/appteleprompter.module';
+import { TeleprompterModule } from './admin/teleprompter/teleprompter.module';
 import { ProjectModule } from './admin/project/project.module';
 import { DashboardModule } from './admin/dashboard/dashboard.module';
 import { Module } from '@nestjs/common';
@@ -24,6 +28,7 @@ import { join } from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
+
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '.', 'public'),
     }),
@@ -45,7 +50,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     TypegooseModule.forRoot("mongodb://localhost:27017/conversionDB", {
       // useNewUrlParser: true,
     }),
-    ProjectModule, ScheduleTaskModule, UploadModule, DashboardModule, AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
+    EventsModule,
+    kPuppeteerModule, ProjectModule, ScheduleTaskModule, UploadModule, AppteleprompterModule, TeleprompterModule, DashboardModule, AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
   controllers: [
     AppController
   ],

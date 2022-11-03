@@ -65,6 +65,9 @@ export class GenericService {
   async priceList() {
     return await this.priceModel.find({}, { _id: 0 }).sort({ sort: 1 });
   }
+  uploadFile(rawBody: any) {
+    console.log(rawBody);
+  }
   // 生成文档
   async officegenWord(_id: any) {
     // 文件存放路径

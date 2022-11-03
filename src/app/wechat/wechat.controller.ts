@@ -66,7 +66,6 @@ export class WechatController {
   async wechatOfficialAccount(@Query() _query: wechatBindofficialAccount, @Req() _req) {
     var eventServer = this.wechatService.eventServerCallback(_query);
     if (eventServer) {
-      console.log(_req.body);
       if (_req.body.xml) {
         let xml = this.wechatEncryptP.decode(_req.body.xml.Encrypt[0]);
         console.log(xml);
