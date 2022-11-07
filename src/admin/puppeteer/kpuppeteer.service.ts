@@ -269,41 +269,57 @@ export class kPuppeteerService {
   async create(options: any, client:any) {
     var _this = this;
     let _index = 0;
+    var isTargetUrl = options.target_url.length > 0 && options.target_url instanceof Array;
+    var _length = (isTargetUrl ? options.target_url.length : 1);
     await this.cluster.task(async ({ page, data: url }) => {
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: 160000 });
-      // var bodyContent = await page.$eval('html', (node: { innerHTML: any; }) => node.innerHTML)
-      // const $b = cheerio.load(bodyContent);
+      await page.goto(url, { timeout: 160000, 'waitUntil': 'networkidle0'  });
+      _this.logger.log('网页加载成功...')
+      var bodyContent = await page.content();
+      const $b = cheerio.load(bodyContent);
       // 校验是否是验要破解验证码
-      // if ($b('body').hasClass('errorPage') || $b('body').hasClass('no-js')) {
-      //   if ($b('#cf-hcaptcha-container').attr('id') !== 'cf-hcaptcha-container' && $b('#not_a_bot').attr('id') === 'not_a_bot') {
-      //     //   await page.evaluate((el) => {
-      //     //     var _button = document.getElementById('not_a_bot') as HTMLElement
-      //     //   _button.click()
-      //     // })
-      //   } else {
-      //     var _resHcaptcha = await page.waitForSelector('#cf-hcaptcha-container', {
-      //       timeout: 260000
-      //     })
-      //     console.log(_resHcaptcha as HTMLElement);
-      //     if (_resHcaptcha as HTMLElement) {
-      //       await page.solveRecaptchas()
-      //       _this.logger.log('已成功破解《' + url + '》验证码...')
-      //       client.emit('log', { event: 'log', type: 'success', data: '已成功破解《' + url + '》验证码...' });
-      //     }
-      //   }
-        
-      // }
+      if ($b('body').hasClass('errorPage') || $b('body').hasClass('no-js')) {
+        _this.logger.log('验证码加载...')
+        var _resHcaptcha = null;
+        console.log($b('#cf-hcaptcha-container').length);
+        await page.waitForSelector('#challenge-stage', {
+          timeout: 8000
+        })
+        if($b('#norobot-container').length > 0) {
+          console.log('点击');
+        }
+        if ($b('#turnstile-wrapper').length > 0 || $b('#norobot-container').length > 0) {
+          _this.logger.log('需要刷新...')
+          await page.evaluate((el:any) => {
+            location.reload();
+          })
+        }
+        if ($b('.hcaptcha-box').length > 0) {
+           _resHcaptcha = await page.waitForSelector('.hcaptcha-box', {
+            timeout: 6000
+          })
+        }
+        if ($b('#cf-hcaptcha-container').length > 0) {
+           _resHcaptcha = await page.waitForSelector('#cf-hcaptcha-container', {
+             timeout: 6000
+          })
+        }
+        if (_resHcaptcha && (_resHcaptcha as HTMLElement)) {
+          await page.solveRecaptchas()
+          _this.logger.log('已成功破解《' + url + '》验证码...')
+          client.emit('log', { event: 'log', type: 'success', data: '已成功破解《' + url + '》验证码...' });
+        }
+      }
       // 等待加载demo完成
       if (options.player) {
         await page.waitForSelector('#player', {
           timeout: 1600000
         });
       } else {
-        await page.waitForSelector('#footer-terms', {
+        await page.waitForSelector('#footer-copy', {
           timeout: 1600000
         });
       }
-      await _this.sleep(500)
+      await _this.sleep(500);
       var _rentContent = '';
       var _saleContent = '';
       var content = await page.$eval('body', (node: { innerHTML: any; }) => node.innerHTML)
@@ -317,35 +333,32 @@ export class kPuppeteerService {
           _rentContent = _saleRentContent;
         }
       }
-      _index++;
-      // console.log(options.target_url);
-      var _length = (options.target_url.length > 0 && options.target_url instanceof Array ? options.target_url.length : 1);
+      isTargetUrl ? _index++: (_index=1);
       _this.logger.log('目前进度' + _index + '/' + _length)
       client.emit('log', { event: 'log', type: 'loading', data: '目前进度:' + _index + '/' + _length });
       return { content: content, _rentContent, _saleContent }
     });
     let result = { content: '', _rentContent: '', _saleContent: '' }
-    var isTargetUrlIsArray = options.target_url.length > 0 && options.target_url instanceof Array;
-    if (options.stepsActive === 1 && isTargetUrlIsArray) {
+    if (options.stepsActive === 1 && isTargetUrl) {
       await Promise.all(options.target_url.map(async (item: any) => {
         // 判断一个sale与rent
         var _resContent = await this.cluster.execute(item);
         var _isSaleContent = item.indexOf('property-for-sale') > -1 ? '_saleContent' : '_rentContent';
         result[_isSaleContent] += _resContent[_isSaleContent];
       }));
-    } if (options.stepsActive === 2 && isTargetUrlIsArray) {
+    } if (options.stepsActive === 2 && isTargetUrl) {
       // 批量获取房源信息
       await Promise.all(options.target_url.map(async (item: any) => {
         var _resContent = await this.cluster.execute(item);
         result.content += _resContent.content;
       }));
-    } else if ((options.stepsActive === 1 && !isTargetUrlIsArray) || options.stepsActive === 3 || !options.stepsActive) {
+    } else if ((options.stepsActive === 1 && !isTargetUrl) || options.stepsActive === 3 || !options.stepsActive) {
       result = await this.cluster.execute(options.target_url);
     }
-    // console.log('result');
+    console.log('result');
+    isTargetUrl && (_index = 0);
     await this.cluster.idle();
     await this.cluster.close();
-    _index = 0;
     return result;
   }
   // 中介列表
@@ -405,11 +418,19 @@ export class kPuppeteerService {
   }
   // 下载资源
   async downloadResource(url: any, id: any, name: any) {
+    var reg = /http(s)?:\/\/([\w-]+\.)+[\w-]+(\/[\w- .\/?%&=]*)?/;
+    if (!reg.test(url)) { 
+      return new Promise((resolve, reject) => {
+        this.logger.log('资源连接不正确...');
+        resolve(true)
+      });
+    }
     const stream = got.stream(url);
     var resStream = stream && await FileType.fromStream(stream)
+
     if ((url && url.indexOf('youtube.com') > -1) || !url || !resStream) {
       return new Promise((resolve, reject) => {
-        this.logger.log('当前连接不能下载资源...')
+        this.logger.log("【"+url+'】当前连接不能下载资源...')
         resolve(true)
       });
     }
@@ -451,13 +472,14 @@ export class kPuppeteerService {
   // 批理下载资源
   public async download(data: any, type: number) {
     // 将房源所有的资源放一起利于下载
-    let isAsync = null;
+    // let isAsync = null;
     const UPLOAD_DIR = _path.join(__dirname, `../../public/upload/${data[type === 1 ?'_id':'community_id']}`)
     fs.emptyDirSync(UPLOAD_DIR) // 清空数据
     if (type === 1) {
+      let videoArr = data.video.filter(item => item.url.indexOf('www.youtube.com') > -1)
       let floor_pic_length = data.floor_pic.length;
       let other_pic_length = data.other_pic.length;
-      let video_length = data.video.length;
+      let video_length = videoArr.length;
       this.logger.log('开始下载《' + data.house_name + '》所有房源资源...')
       await Promise.all(data.floor_pic.map(async (_item: any) => {
         let f = await this.downloadResource(_item, data._id, 'floor_pic')
@@ -467,33 +489,34 @@ export class kPuppeteerService {
         let o = await this.downloadResource(_item, data._id, 'other_pic')
         o && other_pic_length--;
       }));
-      await Promise.all(data.video.map(async (_item: any) => {
+      await Promise.all(videoArr.map(async (_item: any) => {
         let v = await this.downloadResource(_item.url, data._id, 'video')
         v && video_length--;
       }));
-      isAsync = !floor_pic_length && !other_pic_length && !video_length;
+      // isAsync = !floor_pic_length && !other_pic_length && !video_length;
     } 
     // 将小区所有的资源放一起利于下载
     if (type === 2) { 
+      let mangement_video = data.mangement_video.filter(item => item.url.indexOf('www.youtube.com') > -1)
       let mangement_pic_length = data.mangement_pic.length;
-      let mangement_video_length = data.mangement_video.length;
+      let mangement_video_length = mangement_video.length;
       this.logger.log('开始下载《' + data.community_name +'》小区资源...')
       await Promise.all(data.mangement_pic.map(async (_item: any) => {
         let m = await this.downloadResource(_item, data.community_id, 'mangement_pic');
         m && mangement_pic_length--;
       }));
-      await Promise.all(data.mangement_video.map(async (_item: any) => {
+      await Promise.all(mangement_video.map(async (_item: any) => {
         let vi = await this.downloadResource(_item.url, data.community_id, 'mangement_video')
         vi && mangement_pic_length--;
       }));
       let l = await this.downloadResource(data.layout_pic, data.community_id, 'layout_pic')
-      isAsync = !mangement_pic_length && !mangement_video_length && l;
+      // isAsync = !mangement_pic_length && !mangement_video_length && l;
     }
     return new Promise((resolve, reject) => {
-      if (isAsync) {
+      // if (isAsync) {
         this.logger.log('《' + (type === 2 ? data.community_name : data.house_name) + '》完成资源下载')
         resolve(true)
-      }
+      // }
     })
   }
   // 队列验证

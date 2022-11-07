@@ -33,17 +33,17 @@ export class AgentModel {
   @prop({ type: Array })
   houseUrl: []
 
-  // 房源数量
-  @prop({ type: String })
-  sale: String
-
   // 头像是否上传
   @prop({ type: Number, default: 0 })
   photoUpdata: Number
 
   // 房源数量
-  @prop({ type: String })
-  rent: String
+  @prop({ type: Number, default: 0 })
+  sale: Number
+
+  // 房源数量
+  @prop({ type: Number, default: 0 })
+  rent: Number
 
   // 证书编号
   @prop({ type: String })
