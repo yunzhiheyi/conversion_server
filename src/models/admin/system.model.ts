@@ -43,6 +43,10 @@ export class SystemInfoModel {
   @prop({ type: Array })
   whiteUser: []
 
+  // 开启爬虫debug
+  @prop({ type: Number, default: 0 })
+  puppeteer_debug: Number
+
   // 提交IOS审核
   @prop({ type: String, default: '0' })
   isIosAudit: String

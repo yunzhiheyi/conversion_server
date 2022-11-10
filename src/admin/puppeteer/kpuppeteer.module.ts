@@ -9,24 +9,24 @@ import { CryptoModule } from '@akanass/nestjsx-crypto';
 import { HousingModel } from 'src/models/admin/housing.model';
 import { CommunityModel } from 'src/models/admin/community.model';
 import { SnowflakeModule } from '@quickts/nestjs-snowflake';
-import { NestjsHasherModule } from '@sinuos/nestjs-hasher';
+// import { NestjsHasherModule } from '@sinuos/nestjs-hasher';
+import { HashModule } from 'nestjs-hash';
+import { SystemInfoModel } from 'src/models/admin/system.model';
+import { ResourcesModel } from 'src/models/admin/resource.model';
 @Module({
   imports: [
     CryptoModule,
     PuppeteerModule.forRoot(),
     SnowflakeModule.forRoot({ id: 2 }),
-    NestjsHasherModule.register({
-      provider: 'bcrypt',
-      round: 10,
-    }),
-    TypegooseModule.forFeature([AgentModel, HousingModel, CommunityModel]),
+    HashModule.forRoot({ type: 'md5' }),
+    TypegooseModule.forFeature([AgentModel, HousingModel, CommunityModel, SystemInfoModel, ResourcesModel]),
   ],
   controllers: [
     kPuppeteerController
   ],
   providers: [
     kPuppeteerService,
-    ToolsService
+    ToolsService,
   ],
 })
 export class kPuppeteerModule { }

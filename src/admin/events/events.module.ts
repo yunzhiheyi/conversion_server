@@ -8,20 +8,21 @@ import { HousingModel } from 'src/models/admin/housing.model';
 import { ToolsService } from 'src/utils/tools.service';
 import { kPuppeteerService } from '../puppeteer/kpuppeteer.service';
 import { EventsGateway } from './events.gateway';
-import { NestjsHasherModule } from '@sinuos/nestjs-hasher';
+import { HashModule } from 'nestjs-hash';
+import { SystemInfoModel } from 'src/models/admin/system.model';
+import { ResourcesModel } from 'src/models/admin/resource.model';
+
 @Module({
   imports: [
     CryptoModule,
     SnowflakeModule.forRoot({ id: 2 }),
-    NestjsHasherModule.register({
-      provider: 'bcrypt',
-      round: 10,
-    }),
-    TypegooseModule.forFeature([AgentModel, HousingModel, CommunityModel]),
+    HashModule.forRoot({ type: 'md5' }),
+    TypegooseModule.forFeature([AgentModel, HousingModel, CommunityModel, SystemInfoModel, ResourcesModel]),
   ],
   providers: [
     EventsGateway,
     kPuppeteerService,
-    ToolsService],
+    ToolsService
+  ],
 })
 export class EventsModule { }

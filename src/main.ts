@@ -93,6 +93,6 @@ async function bootstrap() {
   const _document = SwaggerModule.createDocument(app, _config, { include: [kPuppeteerModule, GenericModule, AppUserModule, PayModule, AppteleprompterModule, ConversionModule, WechatModule, RecordModule] });
   SwaggerModule.setup('api-docs/app', app, _document);
   SwaggerModule.setup('api-docs/admin', app, document,);
-  await app.listen(3002);
+  await app.listen(3005);
 }
 bootstrap();

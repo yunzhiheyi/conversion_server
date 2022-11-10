@@ -23,6 +23,7 @@ import { ReturnModelType } from '@typegoose/typegoose';
 import { HousingModel } from 'src/models/admin/housing.model';
 import { CommunityModel } from 'src/models/admin/community.model';
 import { ToolsService } from 'src/utils/tools.service';
+
 import { cargoQueue } from 'async';
 
 @WebSocketGateway({
@@ -474,7 +475,6 @@ export class EventsGateway {
             }
           }));
         }
-        await this._agentModel.updateMany({ _id: agentInfo._id }, { $set: { state: 1 } });
       } else {
         client.emit('log', { event: 'log', type: 'warning', data: '中介《' + agentInfo.name + '》无房源数据...' });
       }
@@ -525,20 +525,50 @@ export class EventsGateway {
     housingDetails.type_one = housingTypeInfo[0] || { value: 16003, name: 'N/A' };
     housingDetails.type_two = housingTypeInfo[1] || { value: 16003001, name: 'N/A' };
     housingDetails.type_three = housingTypeInfo[2] || { value: 16003001001, name: 'N/A' };
-    // sale
-    if (!housingInfo) {
-      await this._housingModel.create(housingDetails);
-      client.emit('log', { event: 'log', type: 'success', data: '房源《' + housingDetails.house_name + '》入库成功...' });
-    } else {
-      await this._housingModel.updateMany({ _id: housingDetails._id }, { $set: { ...housingDetails, state: 2 } });
-      client.emit('log', { event: 'log', type: 'success', data: '房源《' + housingDetails.house_name + '》数据已更新...' });
-    }
     // 获取第三方视频连接缩略图
     if (housingDetails.video.length > 0) {
       this.logger.log('获取房源第三方视频连接缩略图...')
       client.emit('log', { event: 'log', type: 'loading', data: '获取房源第三方视频连接缩略图...' });
       await Promise.all(housingDetails.video.map(async (_itemData: any, _itemIndex: any) => {
-        console.log('连接加载' + (_itemData.url.indexOf('youtube.com') > -1));
+        if (_itemData.url.indexOf('youtube.com') > -1) {
+          this.logger.log('getVideoThumbnail...')
+          var _Thumbnail = await this.getVideoThumbnail({
+            target_url: _itemData.url,
+            stepsActive: 3,
+            player: true,
+          }, client);
+          _itemData.thumbnail = _Thumbnail;
+        }
+        return _itemData;
+      }));
+    }
+    if (!housingInfo) {
+      await this._housingModel.create(housingDetails);
+      client.emit('log', { event: 'log', type: 'success', data: '房源《' + housingDetails.house_name + '》入库成功...' });
+    } else {
+      await this._housingModel.updateMany({ _id: housingDetails._id }, { $set: { ...housingDetails } });
+      client.emit('log', { event: 'log', type: 'success', data: '房源《' + housingDetails.house_name + '》数据已更新...' });
+    }
+    await this.getCommunityData(client, housingDetails)
+    // 将房源所有的资源放一起利于下载
+    await this._kPuppeteerService.download(housingDetails, 1, client);
+    return new Promise((resolve, reject) => {
+      resolve({ code: 200, data: housingDetails });
+    })
+  }
+  // 获取所有第三方视频封面
+  public async getVideoCover(client: any, housingDetails: any) {
+    if (housingDetails) {
+      await this._kPuppeteerService.download(housingDetails, 1, client);
+      var communityInfo = await this._communityModel.findOne({ _id: housingDetails.community_id });
+      if (communityInfo) {
+        await this._kPuppeteerService.download(communityInfo, 2, client)
+      }
+    }
+    if (housingDetails.video.length > 0) {
+      this.logger.log('获取房源第三方视频连接缩略图...')
+      client.emit('log', { event: 'log', type: 'loading', data: '获取房源第三方视频连接缩略图...' });
+      await Promise.all(housingDetails.video.map(async (_itemData: any, _itemIndex: any) => {
         if (_itemData.url.indexOf('youtube.com') > -1) {
           var _Thumbnail = await this.getVideoThumbnail({
             target_url: _itemData.url,
@@ -546,149 +576,184 @@ export class EventsGateway {
             player: true,
           }, client);
           _itemData.thumbnail = _Thumbnail;
-          return _itemData;
         }
+        return _itemData;
       }));
+      await this._housingModel.updateMany({ _id: housingDetails._id }, { $set: { ...housingDetails } });
+      return new Promise((resolve, reject) => {
+        client.emit('log', { event: 'log', type: 'success', data: '房源《' + housingDetails.house_name + '》视频封面已更新...' });
+        resolve({ code: 200, data: {} });
+      })
     }
-    await this.getCommunityData(client, housingInfo)
-    // 将房源所有的资源放一起利于下载
-    await this._kPuppeteerService.download(housingDetails, 1);
-    return new Promise((resolve, reject) => {
-      resolve({ code: 200, data: housingDetails });
-    })
   }
-  // 获取房源整个流程
-  public async asyncGethouseData(client: any, data: any) {
+  // 获取房源封面流程
+  public async asyncVideoCoverData(client: any, data: any) {
     var _this = this;
     return new Promise(async (resolve, reject) => {
-      // 第一步 获取中介的信息
-      let agentsInfo: any = await _this.getAgentData(data, client);
-      if (agentsInfo.agentDetails) {
-        var housingInfo = await this._housingModel.find({ agent_id: agentsInfo.agentDetails?._id });
-        var _resData = [];
-        if (housingInfo.length > 0) {
-          console.log('housingInfo');
-          var queue = cargoQueue(async (tasks: any, callback: any) => {
-            await Promise.all(tasks.map(async (_res: any) => {
-              var _rsData: any = await _this.getHouseData(client, _res.url, agentsInfo)
-              if (_rsData && _rsData.code === 200) {
-                _resData.push(_rsData.data)
-                callback();
-              }
-            }))
-          }, 1, 1);
-          housingInfo.map((item: any) => {
-            if (!item.state || item.state === 1) {
-              queue.push({ url: item.url }, async (err) => {
-                this.logger.log('【' + item.house_name + '】完成任务');
-                if (housingInfo[housingInfo.length - 1]._id === item._id) {
-                  this.logger.log('最后一个已经完成任务');
-                  resolve({ code: 200, data: _resData });
-                }
-              });
+      var _housingInfo = await this._housingModel.find({});
+      var _resData = [];
+      if (_housingInfo.length > 0) {
+        var queue = cargoQueue(async (tasks: any, callback: any) => {
+          await Promise.all(tasks.map(async (_res: any) => {
+            var _rsData: any = await _this.getVideoCover(client, _res)
+            if (_rsData && _rsData.code === 200) {
+              _resData.push(_rsData.data)
+              callback();
             }
-          })
-        }
+          }))
+        }, 1, 1);
+        _housingInfo.map((item: any) => {
+          queue.push(item, async (err) => {
+            this.logger.log('【' + item.house_name + '】视频封面完成任务');
+            if (_housingInfo[_housingInfo.length - 1]._id === item._id) {
+              this.logger.log('最后一个视频封面已经完成任务');
+              resolve({ code: 200, data: _resData });
+            }
+          });
+        })
       }
     })
   }
 
+
+  // 获取房源整个流程
+  public async asyncGethouseData(client: any, houseInfo: any, data: any) {
+    var _this = this;
+    return new Promise(async (resolve, reject) => {
+      var agentsInfo = await this._agentModel.findOne({ _id: data.options.id });
+      var _resData = [];
+      if (houseInfo.length > 0) {
+        var queue = cargoQueue(async (tasks: any, callback: any) => {
+          await Promise.all(tasks.map(async (_res: any) => {
+            var _rsData: any = await _this.getHouseData(client, _res.url, agentsInfo)
+            if (_rsData && _rsData.code === 200) {
+              _resData.push(_rsData.data)
+              callback();
+            }
+          }))
+        }, 1, 1);
+        houseInfo.map((item: any) => {
+          if (data.options.ids.length > 0 || (!item.state || item.state === 1)) {
+            queue.push({ url: item.url }, async (err) => {
+              await this._housingModel.updateMany({ _id: item._id }, { $set: { state: 2 } });
+              await this._agentModel.updateMany({ _id: item.agent_id }, { $set: { state: 1 } });
+              this.logger.log('【' + item.house_name + '】完成任务');
+              if (houseInfo[houseInfo.length - 1]._id === item._id) {
+                this.logger.log('最后一个已经完成任务');
+                resolve({ code: 200, data: _resData });
+              }
+            });
+          }
+        })
+      }
+    })
+  }
+
+  // 批量获取小区
+  public async asyncCommunityData(client: any, data: any) {
+    var _this = this;
+    return new Promise(async (resolve, reject) => {
+      // 第一步 获取中介的信息
+      var housingInfo = await this._housingModel.find(data.options.ids && data.options.ids.length > 0 ? { _id: { $in: data.options.ids } } : { agent_id: data.options.aid });
+      if (housingInfo.length > 0) {
+        var queue = cargoQueue(async (tasks: any, callback: any) => {
+          await Promise.all(tasks.map(async (_res: any) => {
+            var _rsData: any = await _this.getCommunityData(client, _res)
+            if (_rsData && _rsData.code === 200) {
+              callback();
+            }
+          }))
+        }, 1, 1);
+        housingInfo.map((item: any) => {
+          queue.push(item, async (err) => {
+            await this._housingModel.updateMany({ agent_id: item.agent_id }, { $set: { community_state: 1 } });
+            this.logger.log('获取小区【' + item.house_name + '】完成任务');
+            if (housingInfo[housingInfo.length - 1]._id === item._id) {
+              this.logger.log('获取小区已经完成任务');
+              resolve({ code: 200, data: {} });
+            }
+          });
+        })
+      }
+    })
+  }
   // 获取小区
   public async getCommunityData(client: any, data: any) {
+    var isCommunityData = await this._communityModel.findOne({ _id: data.community_id });
+
     // 关联小区信息爬取与录入
     if (data.community_id) {
-      this.logger.log('正在获取《' + data.house_name + '》关联小区信息...')
-      client.emit('log', { event: 'log', type: 'loading', data: '正在获取《' + data.house_name + '》关联小区信息...' });
-      var communityDetails: any = await this.getHouseCommunity({
-        target_url: 'https://www.propertyguru.com.sg' + data.community_id,
-        stepsActive: 3,
-        crack: '2',
-      }, client, data, data.agent_id);
-      // 获取第三方视频连接缩略图
-      this.logger.log('获取小区第三方视频连接缩略图...')
-      client.emit('log', { event: 'log', type: 'loading', data: '获取小区第三方视频连接缩略图...' });
-      if (communityDetails && communityDetails.mangement_video && communityDetails.mangement_video.length > 0) {
-        await Promise.all(communityDetails.mangement_video.map(async (_itemData: any, _itemIndex: any) => {
-          var _Thumbnail = '';
-          if (_itemData && _itemData.url.indexOf('www.youtube.com') > -1) {
-            _Thumbnail = await this.getVideoThumbnail({
-              target_url: _itemData.url,
-              stepsActive: 3,
-              player: true,
-            }, client);
-            _itemData.thumbnail = _Thumbnail
-          }
-          return _itemData;
-        }));
-      }
-      var isCommunityData = await this._communityModel.findOne({ _id: data.community_id });
       if (!isCommunityData) {
+        this.logger.log('正在获取《' + data.house_name + '》关联小区信息...')
+        client.emit('log', { event: 'log', type: 'loading', data: '正在获取《' + data.house_name + '》关联小区信息...' });
+        var communityDetails: any;
+        communityDetails = await this.getHouseCommunity({
+          target_url: 'https://www.propertyguru.com.sg' + data.community_id,
+          stepsActive: 3,
+          crack: '2',
+        }, client, data, data.agent_id);
+        // 获取第三方视频连接缩略图
+        this.logger.log('获取小区第三方视频连接缩略图...')
+        client.emit('log', { event: 'log', type: 'loading', data: '获取小区第三方视频连接缩略图...' });
+        if (communityDetails && communityDetails.mangement_video && communityDetails.mangement_video.length > 0) {
+          await Promise.all(communityDetails.mangement_video.map(async (_itemData: any, _itemIndex: any) => {
+            var _Thumbnail = '';
+            if (_itemData && _itemData.url.indexOf('www.youtube.com') > -1) {
+              _Thumbnail = await this.getVideoThumbnail({
+                target_url: _itemData.url,
+                stepsActive: 3,
+                player: true,
+              }, client);
+              _itemData.thumbnail = _Thumbnail
+            }
+            return _itemData;
+          }));
+        }
         await this._communityModel.create(communityDetails);
         client.emit('log', { event: 'log', type: 'success', data: '房源《' + data.house_name + '》所在关联小区入库成功...' });
+
       } else {
-        await this._communityModel.updateMany({ _id: data.community_id }, { $set: { ...communityDetails, state: 2 } });
-        client.emit('log', { event: 'log', type: 'success', data: '房源《' + data.house_name + '》所在关联小区数据已更新...' });
+        this.logger.log('《' + data.house_name + '》关联小区已存在...')
+        client.emit('log', { event: 'log', type: 'warning', data: '《' + data.house_name + '》关联小区已存在...' });
       }
       // 将房源所有的资源放一起利于下载
       var communityInfo = await this._communityModel.findOne({ _id: data.community_id });
       if (communityInfo) {
-        let complete = await this._kPuppeteerService.download(communityInfo, 2)
-        if (complete) {
-          this.logger.log('已完成数据补充...')
-          client.emit('log', { event: 'log', type: 'success', data: '已完成数据补充...' });
-        }
+        await this._kPuppeteerService.download(communityInfo, 2, client)
       }
     } else {
       this.logger.log('《' + data.house_name + '》没有关联小区信息...')
       client.emit('log', { event: 'log', type: 'warning', data: '《' + data.house_name + '》没有关联小区信息...' });
     }
+    return new Promise(async (resolve, reject) => {
+      resolve({ code: 200 });
+    })
   }
   // 监听数据采集实现日志返回
   @SubscribeMessage('events')
   async puppeteer(@MessageBody() data: any, @ConnectedSocket() client: WebSocket): Promise<any> {
     if (data.type === 'start') {
-      var _resData: any = await this.asyncGethouseData(client, data);
-      // if (!data.options.stepsActive) {  // 获取中介
-      //   // 中介列表
-      //   if (data.options.onOff === '2') {
-      //     agentsInfo = await this.getAgentsInfo(data, client)
-      //     await Promise.all(agentsInfo.map(async (item) => {
-      //       var _agentInfo = await this._agentModel.findOne({ _id: item.id });
-      //       // 没有id才入库
-      //       if (!_agentInfo) {
-      //         await this._agentModel.create(item)
-      //         client.emit('log', { event: 'log', type: 'success', data: '中介《' + item.name + '》入库成功...' });
-      //       } else {
-      //         await this._agentModel.updateMany({ _id: _agentInfo._id }, { $set: { ...item } })
-      //         client.emit('log', { event: 'log', type: 'success', data: '中介《' + item.name + '》更新成功...' });
-      //       }
-      //       await this._kPuppeteerService.downloadResource(_agentInfo.photoUrl, 'agent', _agentInfo._id)
-      //     }));
-      //   } else {
-      //     // 单个中介
-      //     agentsInfo = await this.getAgentData(data, client);
-      //     await this._kPuppeteerService.downloadResource(agentsInfo.agentDetails?.photoUrl, 'agent', agentsInfo.agentDetails?._id)
-      //   }
-      //   this.logger.log('中介列表数据已完成...')
-      //   resData = { type: 'agents', data: agentsInfo }
-      // } else if (data.options.stepsActive === 1) { // 获取中介详情信息
-      //   let agentData = await this.getAgentData(data, client);
-      //   resData = { type: 'agentDetails', data: agentData }
-      // } else if (data.options.stepsActive === 2) { // 获取房源信息
-      //   var _agentInfo = await this._agentModel.findOne({ _id: data.options.id });
-      //   var target_url = [];
-      //   if (data.options.target_url.indexOf(',') > -1) {
-      //     target_url = data.options.target_url.split(',')
-      //   } else {
-      //     target_url = [data.options.target_url]
-      //   }
-      //   if (_agentInfo) {
-      //     this.logger.log('正在补充《' + _agentInfo.name + '》房源详情信息...')
-      //     client.emit('log', { event: 'log', type: 'loading', data: '正在补充《' + _agentInfo.name + '》房源详情信息...' });
-      //   }
-      //   await this.getHouseData(client, target_url, _agentInfo?.name)
-      // }
+      var _resData: any;
+      if (data.options.type === 1) {
+        _resData = await this.getAgentData(data, client)
+      }
+      // 开始破解房源
+      if (data.options.type === 2) {
+        var housingInfo = await this._housingModel.find(data.options.ids && data.options.ids.length > 0 ? { _id: { $in: data.options.ids } } : { agent_id: data.options.id });
+        _resData = await this.asyncGethouseData(client, housingInfo, data)
+      }
+      if (data.options.type === 3) {
+        _resData = await this.asyncCommunityData(client, data)
+      }
+      if (data.options.type === 4) {
+        _resData = await this.asyncVideoCoverData(client, data)
+      }
       return { event: 'events', data: _resData.data }
+    }
+    if (data.type === 'pm2') {
+      this.logger.log('重启服务中...');
+      await this.toolsService.ShellExecCmd('yarn pm2:reload', '重启服务');
+      return { event: 'events', data: '重启成功' }
     }
   }
 

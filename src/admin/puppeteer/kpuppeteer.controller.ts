@@ -1,14 +1,15 @@
 import { Body, Controller, Get, Post, Request, All, Headers, UseGuards, Query, Req, Res, HttpCode, Logger } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { kPuppeteerService } from './kpuppeteer.service';
-import * as cheerio from 'cheerio';
 import { pagesDto, IdDto, housingIdDto, KaolaBody } from '../admin.dto';
+import { ToolsService } from 'src/utils/tools.service';
 @Controller('admin')
 @ApiTags('爬虫')
 export class kPuppeteerController {
   logger: Logger;
   constructor(
     private readonly _kPuppeteerService: kPuppeteerService,
+    private readonly toolsService: ToolsService,
   ) {
     this.logger = new Logger('kPuppeteerController')
   }

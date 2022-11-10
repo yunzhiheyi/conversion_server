@@ -176,4 +176,8 @@ export class HousingModel {
   @prop({ type: Number, default: 0 })
   state: Number
 
+  // 当前的状态  0 完成数据 1
+  @prop({ type: Number, default: 0 })
+  community_state: Number
+
 }

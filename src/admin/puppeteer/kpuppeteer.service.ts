@@ -16,15 +16,15 @@ import * as cheerio from 'cheerio';
 import { HousingModel } from 'src/models/admin/housing.model';
 import { CommunityModel } from 'src/models/admin/community.model';
 import { Cluster } from 'puppeteer-cluster';
-import dayjs from 'dayjs';
-import FileType from 'file-type';
 import fs from 'fs-extra';
 import _path from 'path';
-import got from 'got';
+import mime from 'mime';
 import axios from 'axios';
+// import { NestjsHasherService } from '@sinuos/nestjs-hasher';
+import { HashService } from 'nestjs-hash';
+import { ResourcesModel } from 'src/models/admin/resource.model';
+import { SystemInfoModel } from 'src/models/admin/system.model';
 import { SnowflakeService } from '@quickts/nestjs-snowflake';
-import { NestjsHasherService } from '@sinuos/nestjs-hasher';
-import console from 'console';
 @Injectable()
 export class kPuppeteerService {
   public browser: any;
@@ -41,9 +41,13 @@ export class kPuppeteerService {
     private readonly housingModel: ReturnModelType<typeof HousingModel>,
     @InjectModel(CommunityModel)
     private readonly communityModel: ReturnModelType<typeof CommunityModel>,
+    @InjectModel(SystemInfoModel)
+    private readonly systemInfoModel: ReturnModelType<typeof SystemInfoModel>,
+    @InjectModel(ResourcesModel)
+    private readonly resourcesModel: ReturnModelType<typeof ResourcesModel>,
     private readonly toolsService: ToolsService,
+    private readonly hasherService: HashService,
     private readonly snowflakeService: SnowflakeService,
-    private readonly hasherService: NestjsHasherService
     // @InjectContext() private readonly browserContext: BrowserContext,
   ) {
     const puppeteer = addExtra(vanillaPuppeteer)
@@ -54,32 +58,34 @@ export class kPuppeteerService {
         visualFeedback: true // colorize reCAPTCHAs (violet = detected, green = solved)
       })
     );
-    this.logger = new Logger('kPuppeteerService')
-    Cluster.launch({
-      concurrency: Cluster.CONCURRENCY_PAGE,
-      maxConcurrency: 100,
-      retryLimit: 20,   // 重试次数
-      skipDuplicateUrls: true,  // 不爬重复的url
-      monitor: false,  // 显示性能消耗
-      timeout: 10060000,
-      puppeteer: puppeteer,
-      puppeteerOptions: {
-        headless: false,
-        defaultViewport: null,
-        ignoreHTTPSErrors: true,        // 忽略证书错误
-        args: [
-          '--disable-gpu',
-          '--disable-dev-shm-usage',
-          '--disable-xss-auditor',    // 关闭 XSS Auditor
-          '--no-zygote',
-          '--allow-running-insecure-content',     // 允许不安全内容
-          '--disable-webgl',
-          '--disable-popup-blocking',
-        ],
-        ignoreDefaultArgs: ['--enable-automation'],
-      },
-    }).then((res) => {
-      this.cluster = res;
+    this.logger = new Logger('kPuppeteerService');
+    this.systemInfoModel.findOne({ _id: "SYS" }, { __v: 0, _id: 0 }).then((SYS) => {
+      Cluster.launch({
+        concurrency: Cluster.CONCURRENCY_PAGE,
+        maxConcurrency: 100,
+        retryLimit: 20,   // 重试次数
+        skipDuplicateUrls: false,  // 不爬重复的url
+        monitor: false,  // 显示性能消耗
+        timeout: 10060000,
+        puppeteer: puppeteer,
+        puppeteerOptions: {
+          headless: !SYS.puppeteer_debug,
+          defaultViewport: null,
+          ignoreHTTPSErrors: true,        // 忽略证书错误
+          args: [
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-xss-auditor',    // 关闭 XSS Auditor
+            '--no-zygote',
+            '--allow-running-insecure-content',     // 允许不安全内容
+            '--disable-webgl',
+            '--disable-popup-blocking',
+          ],
+          ignoreDefaultArgs: ['--enable-automation'],
+        },
+      }).then((res) => {
+        this.cluster = res;
+      })
     })
     var _this = this;
     qiniu.conf.ACCESS_KEY = 'w27Ypatv9ZGGhJ-BSRn2G40SNSuOwvpyM2--Kxsi';
@@ -89,8 +95,13 @@ export class kPuppeteerService {
     config['zone'] = qiniu.zone.Zone_as0;
     _this.bucketManager = new qiniu.rs.BucketManager(mac, config);
     // var putPolicy = new qiniu.rs.PutPolicy({ scope: 'cd-brighton' });
-    var putPolicy = new qiniu.rs.PutPolicy({ scope: 'kaola-app' });
-    this.qiniuToken = putPolicy.uploadToken();
+    // var putPolicy = new qiniu.rs.PutPolicy({ scope: 'kaola-app' });
+    // this.qiniuToken = putPolicy.uploadToken();
+  }
+
+  public getQiniuToken(key:any) {
+    var putPolicy = new qiniu.rs.PutPolicy({ scope: 'kaola-app:' + key });
+    return  putPolicy.uploadToken();
   }
   
   // 上传文件
@@ -100,8 +111,9 @@ export class kPuppeteerService {
     // key 为上传到七牛云后自定义图片的名称
     var _key = 'upload' + '/' + filePathName;
     var extra = new qiniu.form_up.PutExtra();
+    var token = this.getQiniuToken(_key);
     return new Promise((resolve, reject) => {
-      formUploader.putFile(this.qiniuToken, _key, filePaths, extra, async (err, ret) => {
+      formUploader.putFile(token, _key, filePaths, extra, async (err, ret) => {
         if (!err) {
           var _o = {
             hash: ret.hash,
@@ -280,25 +292,26 @@ export class kPuppeteerService {
       if ($b('body').hasClass('errorPage') || $b('body').hasClass('no-js')) {
         _this.logger.log('验证码加载...')
         var _resHcaptcha = null;
-        console.log($b('#cf-hcaptcha-container').length);
-        await page.waitForSelector('#challenge-stage', {
-          timeout: 8000
-        })
-        if($b('#norobot-container').length > 0) {
-          console.log('点击');
-        }
-        if ($b('#turnstile-wrapper').length > 0 || $b('#norobot-container').length > 0) {
-          _this.logger.log('需要刷新...')
+        await page.waitForSelector('#challenge-stage')
+        await _this.sleep(1000);
+        var _bodyContent = await page.content();
+        const $a = cheerio.load(_bodyContent);
+        if ($a('#turnstile-wrapper').length > 0 || $a('#norobot-container').length > 0) {
+          _this.logger.log('刷新页面...')
           await page.evaluate((el:any) => {
             location.reload();
           })
         }
-        if ($b('.hcaptcha-box').length > 0) {
+        if (!$a('.hcaptcha-box').length && !$a('#cf-hcaptcha-container').length) {
+          _this.logger.log('需要手动点击验证码,请打开debug模式后重启服务...')
+          client.emit('log', { event: 'log', type: 'loading', data: '需要手动点击验证码,请打开debug模式后重启服务...' });
+        }
+        if ($a('.hcaptcha-box').length > 0) {
            _resHcaptcha = await page.waitForSelector('.hcaptcha-box', {
             timeout: 6000
           })
         }
-        if ($b('#cf-hcaptcha-container').length > 0) {
+        if ($a('#cf-hcaptcha-container').length > 0) {
            _resHcaptcha = await page.waitForSelector('#cf-hcaptcha-container', {
              timeout: 6000
           })
@@ -333,9 +346,11 @@ export class kPuppeteerService {
           _rentContent = _saleRentContent;
         }
       }
-      isTargetUrl ? _index++: (_index=1);
-      _this.logger.log('目前进度' + _index + '/' + _length)
-      client.emit('log', { event: 'log', type: 'loading', data: '目前进度:' + _index + '/' + _length });
+      isTargetUrl ? _index++ : (_index = 1);
+      if (isTargetUrl) {
+        _this.logger.log('目前进度' + _index + '/' + _length)
+        client.emit('log', { event: 'log', type: 'loading', data: '目前进度:' + _index + '/' + _length });
+      }
       return { content: content, _rentContent, _saleContent }
     });
     let result = { content: '', _rentContent: '', _saleContent: '' }
@@ -353,9 +368,9 @@ export class kPuppeteerService {
         result.content += _resContent.content;
       }));
     } else if ((options.stepsActive === 1 && !isTargetUrl) || options.stepsActive === 3 || !options.stepsActive) {
-      result = await this.cluster.execute(options.target_url);
+        result = await this.cluster.execute(options.target_url);
     }
-    console.log('result');
+    // console.log('result');
     isTargetUrl && (_index = 0);
     await this.cluster.idle();
     await this.cluster.close();
@@ -419,40 +434,52 @@ export class kPuppeteerService {
   // 下载资源
   async downloadResource(url: any, id: any, name: any) {
     var reg = /http(s)?:\/\/([\w-]+\.)+[\w-]+(\/[\w- .\/?%&=]*)?/;
-    if (!reg.test(url)) { 
-      return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      if (!reg.test(url)) { 
         this.logger.log('资源连接不正确...');
-        resolve(true)
-      });
-    }
-    const stream = got.stream(url);
-    var resStream = stream && await FileType.fromStream(stream)
-
-    if ((url && url.indexOf('youtube.com') > -1) || !url || !resStream) {
-      return new Promise((resolve, reject) => {
+        resolve(true);
+        return;
+      }
+      if ((url && url.indexOf('youtube.com') > -1) || !url) {
         this.logger.log("【"+url+'】当前连接不能下载资源...')
-        resolve(true)
-      });
-    }
-    let timeDir = await this.snowflakeService.nextId() + '';
-   
-    let flieMp4Name = `${timeDir}.${resStream.ext}`;
-    // 文件存放路径
-    const UPLOAD_DIR = _path.join(__dirname, `../../public/upload/${id}/${name}`)
-    fs.ensureDirSync(UPLOAD_DIR)
-    const mp4FilePath = _path.resolve(UPLOAD_DIR, flieMp4Name);
-    let writeStream = fs.createWriteStream(mp4FilePath); // 创建可写流
-    const resData = await axios({ url, responseType: 'stream' })
-    // 下载资源
-    return new Promise((resolve, reject) => {
-      if (resData) {
-        resData.data.pipe(writeStream)
+        resolve(true);
+        return;
+      }
+      // 头像用目录id命名
+      let timeDir = id === 'agent' ? name : await this.hasherService.hash(url);
+      let _url = await this.resourcesModel.findOne({ url: url, state:0});
+      if (_url) {
+        resolve(true);
+        return;
+      }
+      // 文件存放路径
+      const UPLOAD_DIR = _path.join(__dirname, `../../public/upload/${id === 'agent' ? id + '/' : id + '/'+name}`)
+      fs.ensureDirSync(UPLOAD_DIR)
+      const _id = await this.snowflakeService.nextId()
+      try {
+        const resData = await axios({ url, responseType: 'stream' })
+        const contentType = resData.headers['content-type'];
+        const ext = mime.getExtension(contentType);
+        let flieName = `${timeDir}.${ext}`;
+        const filePath = _path.resolve(UPLOAD_DIR, flieName);
+        const _id = await this.snowflakeService.nextId()
+        let writeStream = fs.createWriteStream(filePath); // 创建可写流
+        // 下载资源
+        if (resData) {
+          resData.data.pipe(writeStream)
+        } else {
+          this.logger.log(filePath + '下载失败')
+          resolve(true)
+        }
         writeStream.on('finish', async () => {
+          // 成功
+          await this.resourcesModel.create({ _id, hid: id, url });
           resolve(true)
         })
-        writeStream.on('error', () => {
-          reject(false)
-        })
+      } catch (error) {
+        this.logger.log('error:' + url + '下载失败')
+        await this.resourcesModel.create({ _id, hid: id, url,state:1});
+        resolve(true)
       }
     })
   }
@@ -462,61 +489,69 @@ export class kPuppeteerService {
     const community_id = housingResult.map(item => item.community_id)
     const communityResult = await this.communityModel.find({ _id: { $in: community_id } }, { __v: 0, createdAt: 0, updatedAt: 0 });
     await Promise.all(housingResult.map(async (item:any) => { 
-        await this.download(item, 1);
+        await this.download(item, 1,null);
     }));
     await Promise.all(communityResult.map(async (item: any) => {
-        await this.download(item, 2);
+      await this.download(item, 2, null);
     }));
     return true;
   }
   // 批理下载资源
-  public async download(data: any, type: number) {
+  public async download(data: any, type: number, client:any) {
     // 将房源所有的资源放一起利于下载
-    // let isAsync = null;
     const UPLOAD_DIR = _path.join(__dirname, `../../public/upload/${data[type === 1 ?'_id':'community_id']}`)
     fs.emptyDirSync(UPLOAD_DIR) // 清空数据
-    if (type === 1) {
-      let videoArr = data.video.filter(item => item.url.indexOf('www.youtube.com') > -1)
-      let floor_pic_length = data.floor_pic.length;
-      let other_pic_length = data.other_pic.length;
-      let video_length = videoArr.length;
-      this.logger.log('开始下载《' + data.house_name + '》所有房源资源...')
-      await Promise.all(data.floor_pic.map(async (_item: any) => {
-        let f = await this.downloadResource(_item, data._id, 'floor_pic')
-        f && floor_pic_length--;
-      }));
-      await Promise.all(data.other_pic.map(async (_item: any) => {
-        let o = await this.downloadResource(_item, data._id, 'other_pic')
-        o && other_pic_length--;
-      }));
-      await Promise.all(videoArr.map(async (_item: any) => {
-        let v = await this.downloadResource(_item.url, data._id, 'video')
-        v && video_length--;
-      }));
-      // isAsync = !floor_pic_length && !other_pic_length && !video_length;
-    } 
-    // 将小区所有的资源放一起利于下载
-    if (type === 2) { 
-      let mangement_video = data.mangement_video.filter(item => item.url.indexOf('www.youtube.com') > -1)
-      let mangement_pic_length = data.mangement_pic.length;
-      let mangement_video_length = mangement_video.length;
-      this.logger.log('开始下载《' + data.community_name +'》小区资源...')
-      await Promise.all(data.mangement_pic.map(async (_item: any) => {
-        let m = await this.downloadResource(_item, data.community_id, 'mangement_pic');
-        m && mangement_pic_length--;
-      }));
-      await Promise.all(mangement_video.map(async (_item: any) => {
-        let vi = await this.downloadResource(_item.url, data.community_id, 'mangement_video')
-        vi && mangement_pic_length--;
-      }));
-      let l = await this.downloadResource(data.layout_pic, data.community_id, 'layout_pic')
-      // isAsync = !mangement_pic_length && !mangement_video_length && l;
-    }
-    return new Promise((resolve, reject) => {
-      // if (isAsync) {
-        this.logger.log('《' + (type === 2 ? data.community_name : data.house_name) + '》完成资源下载')
-        resolve(true)
-      // }
+    return new Promise(async (resolve, reject) => {
+      if (type === 1) {
+        let videoArr = data.video.filter(item => item.url.indexOf('www.youtube.com') > -1)
+        this.logger.log('开始下载《' + data.house_name + '》所有房源资源...')
+        client && client.emit('log', { event: 'log', type: 'loading', data: '开始下载《' + data.house_name + '》所有房源资源...' });
+        try{
+          if (data.floor_pic.length > 0) {
+            await Promise.all(data.floor_pic.map(async (_item: any) => {
+              await this.downloadResource(_item, data._id, 'floor_pic')
+            }));
+          }
+          if (data.other_pic.length > 0) {
+            await Promise.all(data.other_pic.map(async (_item: any) => {
+              await this.downloadResource(_item, data._id, 'other_pic')
+            }));
+          }
+          if (data.other_pic.length > 0) {
+            await Promise.all(videoArr.map(async (_item: any) => {
+              await this.downloadResource(_item.url, data._id, 'video')
+            }));
+          }
+        } catch (e) {
+          this.logger.log('《' + data.house_name + '》资源下载失败')
+          resolve(true);
+        }
+      } 
+      // 将小区所有的资源放一起利于下载
+      if (type === 2) { 
+        let mangement_video = data.mangement_video.filter(item => item.url.indexOf('www.youtube.com') > -1)
+        this.logger.log('开始下载《' + data.community_name + '》小区资源...')
+        client &&  client.emit('log', { event: 'log', type: 'loading', data: '开始下载《' + data.community_name + '》小区资源...' });
+        try {
+          if (data.mangement_pic.length > 0) {
+            await Promise.all(data.mangement_pic.map(async (_item: any) => {
+              await this.downloadResource(_item, data.community_id, 'mangement_pic');
+            }));
+          }
+          if (mangement_video.length > 0) {
+            await Promise.all(mangement_video.map(async (_item: any) => {
+              await this.downloadResource(_item.url, data.community_id, 'mangement_video')
+            }));
+          }
+          data.layout_pic && await this.downloadResource(data.layout_pic, data.community_id, 'layout_pic')
+        } catch (e) {
+          this.logger.log('《' + data.community_name + '》资源下载失败')
+          resolve(true);
+        }
+      }
+      this.logger.log('《' + (type === 2 ? data.community_name : data.house_name) + '》完成资源下载')
+      client &&  client.emit('log', { event: 'log', type: 'success', data: '《' + (type === 2 ? data.community_name : data.house_name) + '》完成资源下载' });
+      resolve(true);
     })
   }
   // 队列验证
