@@ -28,15 +28,6 @@ export class pagesDto {
   @IsNotEmpty()
   readonly keyword: string;
 
-  @ApiProperty({ description: '状态', example: '1' })
-  @IsNotEmpty()
-  readonly status: string;
-
-  @ApiProperty({ description: '用户ID', example: '1' })
-  readonly user_id: string;
-
-  @ApiProperty({ description: '被邀请码', example: '1' })
-  readonly invitee_code: string;
 
 }
 

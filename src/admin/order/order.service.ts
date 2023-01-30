@@ -31,7 +31,6 @@ export class OrderService {
     if (query.status) {
       findField['status'] = query.status
     }
-
     const options = {
       type: 'pop',
       findField,

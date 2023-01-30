@@ -13,6 +13,7 @@ import { SnowflakeModule } from '@quickts/nestjs-snowflake';
 import { HashModule } from 'nestjs-hash';
 import { SystemInfoModel } from 'src/models/admin/system.model';
 import { ResourcesModel } from 'src/models/admin/resource.model';
+
 @Module({
   imports: [
     CryptoModule,
