@@ -1,5 +1,3 @@
-import { kPuppeteerModule } from './admin/puppeteer/kpuppeteer.module';
-import { EventsModule } from './admin/events/events.module';
 import { AppteleprompterModule } from './app/teleprompter/appteleprompter.module';
 import { TeleprompterModule } from './admin/teleprompter/teleprompter.module';
 import { ProjectModule } from './admin/project/project.module';
@@ -49,9 +47,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     // mongodb数据库连接
     TypegooseModule.forRoot("mongodb://localhost:27017/conversionDB", {
       // useNewUrlParser: true,
-    }),
-    EventsModule,
-    kPuppeteerModule, ProjectModule, ScheduleTaskModule, UploadModule, AppteleprompterModule, TeleprompterModule, DashboardModule, AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
+    }), ProjectModule, ScheduleTaskModule, UploadModule, AppteleprompterModule, TeleprompterModule, DashboardModule, AuserModule, MenuModule, RoleModule, GenericModule, AppUserModule, RecordModule, PayModule, SystemModule, ConversionModule, WechatModule, OrderModule, PriceModule],
   controllers: [
     AppController
   ],

@@ -157,7 +157,6 @@ export class GenericController {
   @HttpCode(200)
   @ApiOperation({ summary: '获取token' })
   async QiuniuToken(@Query() _Query: FileDto) {
-    console.log(_Query)
     var _key = _Query.fileName;
     var token = this.qiniuService.uptoken(_key);
     console.log(token);
